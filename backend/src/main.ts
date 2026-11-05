@@ -10,7 +10,9 @@ async function bootstrap() {
   const port = Number(process.env.PORT ?? 4000);
 
   app.setGlobalPrefix("api");
-  app.enableCors({ origin: (process.env.CORS_ORIGIN ?? "http://localhost:3000").split(","), credentials: true });
+  // Le navigateur envoie l'origine sans « / » final : on le retire pour qu'une URL copiée telle quelle fonctionne.
+  const origins = (process.env.CORS_ORIGIN ?? "http://localhost:3000").split(",").map((o) => o.trim().replace(/\/+$/, ""));
+  app.enableCors({ origin: origins, credentials: true });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
   app.enableShutdownHooks();
 

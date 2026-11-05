@@ -1,0 +1,15 @@
+# Un seul domaine : /api et /docs vers l'API, tout le reste vers le front.
+# Certificat HTTPS Let's Encrypt obtenu et renouvelé automatiquement.
+{$DOMAIN} {
+	encode zstd gzip
+
+	handle /api/* {
+		reverse_proxy api:4000
+	}
+	handle /docs* {
+		reverse_proxy api:4000
+	}
+	handle {
+		reverse_proxy web:3000
+	}
+}

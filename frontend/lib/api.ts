@@ -2,6 +2,9 @@
 
 export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api").replace(/\/$/, "");
 
+/** Évite la page d'avertissement que ngrok (offre gratuite) renvoie à la place de la réponse de l'API. */
+export const BASE_HEADERS: Record<string, string> = /\.ngrok(-free)?\.(app|dev|io)/.test(API_URL) ? { "ngrok-skip-browser-warning": "1" } : {};
+
 const TOKEN_KEY = "lirel:token";
 
 export const tokenStore = {
@@ -48,6 +51,7 @@ export async function api<T = void>(path: string, opts: { method?: Method; body?
     res = await fetch(`${API_URL}${path}`, {
       method: opts.method ?? (opts.body ? "POST" : "GET"),
       headers: {
+        ...BASE_HEADERS,
         ...(opts.body !== undefined ? { "Content-Type": "application/json" } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },

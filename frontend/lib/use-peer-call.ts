@@ -77,15 +77,17 @@ export function usePeerCall({ active, lobby, room, meId, partnerId, getTracks, m
   );
 
   /** Branche les pistes locales sur les émetteurs audio / vidéo de la connexion. */
-  const attachTracks = useCallback(() => {
+  const attachTracks = useCallback(async () => {
     const conn = pc.current;
     if (!conn) return;
     const { audio, video } = getTracksRef.current();
-    for (const t of conn.getTransceivers()) {
-      const kind = t.receiver.track.kind;
-      if (t.direction === "inactive" || t.direction === "recvonly") t.direction = "sendrecv";
-      void t.sender.replaceTrack(kind === "audio" ? audio : video).catch(() => undefined);
-    }
+    await Promise.all(
+      conn.getTransceivers().map((t) => {
+        const kind = t.receiver.track.kind;
+        if (t.direction === "inactive" || t.direction === "recvonly") t.direction = "sendrecv";
+        return t.sender.replaceTrack(kind === "audio" ? audio : video).catch(() => undefined);
+      }),
+    );
   }, []);
 
   const closePc = useCallback(() => {
@@ -147,7 +149,7 @@ export function usePeerCall({ active, lobby, room, meId, partnerId, getTracks, m
     const conn = newPc(generation);
     conn.addTransceiver("audio", { direction: "sendrecv" });
     conn.addTransceiver("video", { direction: "sendrecv" });
-    attachTracks();
+    void attachTracks();
     const offer = await conn.createOffer();
     if (pc.current !== conn) return;
     await conn.setLocalDescription(offer);
@@ -209,7 +211,7 @@ export function usePeerCall({ active, lobby, room, meId, partnerId, getTracks, m
           setPartnerPresent(true);
           const conn = newPc(p.gen);
           await conn.setRemoteDescription(p.sdp);
-          attachTracks();
+          void attachTracks();
           const answer = await conn.createAnswer();
           if (pc.current !== conn) break;
           await conn.setLocalDescription(answer);

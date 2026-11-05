@@ -1,6 +1,6 @@
 /** Client temps réel : flux SSE de l'API (GET /realtime), lu via fetch pour garder le jeton dans l'en-tête Authorization. */
 
-import { API_URL, tokenStore } from "./api";
+import { API_URL, BASE_HEADERS, tokenStore } from "./api";
 import type { Message } from "./types";
 
 /** Signaux d'appel vidéo relayés par le serveur entre les deux participants. */
@@ -32,7 +32,7 @@ export function sendSignal(to: string, room: string, kind: CallSignal, payload: 
   if (!token) return Promise.resolve();
   return fetch(`${API_URL}/calls/signal`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    headers: { ...BASE_HEADERS, "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify({ to, room, kind, payload }),
     keepalive,
   }).then(
@@ -55,7 +55,7 @@ export function connectRealtime(token: string, onEvent: (e: RealtimeEvent) => vo
       onStatus("connecting");
       try {
         const res = await fetch(`${API_URL}/realtime`, {
-          headers: { Authorization: `Bearer ${token}`, Accept: "text/event-stream" },
+          headers: { ...BASE_HEADERS, Authorization: `Bearer ${token}`, Accept: "text/event-stream" },
           cache: "no-store",
           signal: abort.signal,
         });

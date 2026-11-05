@@ -73,6 +73,7 @@ export default function VisioPage() {
   const [micError, setMicError] = useState<string | null>(null);
   const [hasVideo, setHasVideo] = useState(false);
   const [hasAudio, setHasAudio] = useState(false);
+  const [remoteFrozen, setRemoteFrozen] = useState(false);
   /** Incrémenté à chaque nouveau flux local : déclenche l'envoi des pistes à l'interlocuteur. */
   const [streamVersion, setStreamVersion] = useState(0);
   /** Incrémenté par « Réessayer » pour redemander la caméra et le micro. */
@@ -90,6 +91,8 @@ export default function VisioPage() {
   const remoteRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const screenRef = useRef<MediaStream | null>(null);
+  /** Écran dont le partage vient d'être arrêté, coupé une fois la caméra rebranchée. */
+  const oldScreenRef = useRef<MediaStream | null>(null);
   const sharingRef = useRef(false);
   sharingRef.current = sharing;
 
@@ -119,8 +122,10 @@ export default function VisioPage() {
   const stopAll = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     screenRef.current?.getTracks().forEach((t) => t.stop());
+    oldScreenRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     screenRef.current = null;
+    oldScreenRef.current = null;
   }, []);
 
   // Caméra et micro réels du navigateur.
@@ -173,6 +178,10 @@ export default function VisioPage() {
       const gotAudio = !!stream?.getAudioTracks().length;
       setHasVideo(gotVideo);
       setHasAudio(gotAudio);
+      // Webcam reprise par une autre application : l'interlocuteur verra l'avatar plutôt qu'une image figée.
+      stream?.getVideoTracks()[0]?.addEventListener("ended", () => {
+        if (streamRef.current === stream) setHasVideo(false);
+      });
       setCamError(gotVideo ? null : mediaErrorMessage(videoErr ?? both.e, "camera") + (gotAudio ? " Votre micro fonctionne : vous pouvez échanger en audio." : ""));
       setMicError(gotAudio ? null : mediaErrorMessage(audioErr ?? both.e, "micro"));
       if (videoRef.current && !sharingRef.current) videoRef.current.srcObject = stream;
@@ -194,13 +203,37 @@ export default function VisioPage() {
   }, [phase, sharing, streamVersion]);
 
   // Nouvelle piste (caméra obtenue, partage d'écran) : on l'envoie à l'interlocuteur.
+  // L'écran partagé n'est coupé qu'une fois la caméra rebranchée : sinon l'émetteur reste un instant
+  // sur une piste terminée et l'interlocuteur garde la dernière image de l'écran, figée.
   useEffect(() => {
-    updateTracks();
+    void updateTracks().finally(() => {
+      if (sharingRef.current) return;
+      oldScreenRef.current?.getTracks().forEach((t) => t.stop());
+      oldScreenRef.current = null;
+    });
   }, [sharing, streamVersion, updateTracks]);
 
   useEffect(() => {
     if (remoteRef.current) remoteRef.current.srcObject = remoteStream;
   }, [remoteStream, connected, phase]);
+
+  // Vidéo de l'interlocuteur figée (plus aucune image reçue) : on affiche son avatar plutôt que la dernière image.
+  // Pas pendant un partage d'écran, dont les images n'arrivent que lorsque le contenu change.
+  const partnerSharing = call.partnerMedia.sharing;
+  useEffect(() => {
+    setRemoteFrozen(false);
+    const el = remoteRef.current;
+    if (simulated || partnerSharing || !remoteStream || !el?.getVideoPlaybackQuality) return;
+    let last = el.getVideoPlaybackQuality().totalVideoFrames;
+    let still = 0;
+    const timer = setInterval(() => {
+      const frames = el.getVideoPlaybackQuality().totalVideoFrames;
+      still = frames === last ? still + 1 : 0;
+      last = frames;
+      setRemoteFrozen(still >= 2);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [remoteStream, partnerSharing, simulated, connected, phase]);
 
   useEffect(() => {
     streamRef.current?.getAudioTracks().forEach((t) => (t.enabled = mic));
@@ -256,12 +289,13 @@ export default function VisioPage() {
   const ofFirst = /^[aeiouyhâàéèêîïôû]/i.test(first) ? `d'${first}` : `de ${first}`;
   const jitsiRoom = `Lirel-${(session?.id ?? id).replace(/[^a-zA-Z0-9]/g, "")}`;
   const time = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
-  const partnerCam = simulated ? false : call.partnerMedia.cam || call.partnerMedia.sharing;
+  const partnerCam = simulated ? false : call.partnerMedia.sharing || (call.partnerMedia.cam && !remoteFrozen);
   const partnerMic = simulated ? true : call.partnerMedia.mic;
 
   const toggleShare = async () => {
     if (sharing) {
-      screenRef.current?.getTracks().forEach((t) => t.stop());
+      // Arrêté après le retour de la caméra (cf. effet d'envoi des pistes).
+      oldScreenRef.current = screenRef.current;
       screenRef.current = null;
       setSharing(false);
       return;
