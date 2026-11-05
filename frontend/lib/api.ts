@@ -1,4 +1,4 @@
-/** Client HTTP de l'API Lirel (backend NestJS). */
+/** Client HTTP de l'API MonMentor (backend NestJS). */
 
 export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api").replace(/\/$/, "");
 
@@ -40,7 +40,7 @@ export class ApiError extends Error {
   }
 }
 
-export const OFFLINE_MESSAGE = "Impossible de joindre le serveur Lirel. Vérifiez que l'API est démarrée (npm run dev dans backend/).";
+export const OFFLINE_MESSAGE = "Impossible de joindre le serveur MonMentor. Vérifiez que l'API est démarrée (npm run dev dans backend/).";
 
 type Method = "GET" | "POST" | "PATCH" | "DELETE";
 

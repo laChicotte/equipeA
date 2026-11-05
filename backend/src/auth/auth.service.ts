@@ -64,7 +64,7 @@ export class AuthService {
     await this.notifications.notify(
       user.id,
       actor?.id ?? null,
-      mentor ? "vous souhaite la bienvenue parmi les mentors Lirel ! Complétez votre profil pour être recommandé·e." : "vous souhaite la bienvenue sur Lirel ! Trouvez votre premier mentor en deux minutes.",
+      mentor ? "vous souhaite la bienvenue parmi les mentors MonMentor ! Complétez votre profil pour être recommandé·e." : "vous souhaite la bienvenue sur MonMentor ! Trouvez votre premier mentor en deux minutes.",
       mentor ? "/profil" : "/mentors",
     );
     return this.token(user.id);

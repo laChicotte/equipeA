@@ -60,7 +60,7 @@ export default function Trouver() {
           <Sparkles size={13} /> Recommandation guidée
         </Eyebrow>
         <h1 className="mt-3 font-serif text-2xl leading-tight sm:text-[2.25rem]">De quoi avez-vous besoin ?</h1>
-        <p className="mt-3 max-w-xl text-creme/70">Expliquez votre situation comme vous le feriez à un ami. Lirel identifie les domaines concernés et vous propose les mentors les plus adaptés, en expliquant pourquoi.</p>
+        <p className="mt-3 max-w-xl text-creme/70">Expliquez votre situation comme vous le feriez à un ami. MonMentor identifie les domaines concernés et vous propose les mentors les plus adaptés, en expliquant pourquoi.</p>
 
         <form onSubmit={analyse} className="mt-6">
           <div className="mb-4 flex flex-wrap gap-2">
@@ -170,7 +170,7 @@ export default function Trouver() {
 
           <p className="mt-8 flex items-start gap-2 rounded-2xl bg-beige/60 px-4 py-3 text-xs leading-relaxed text-encre">
             <Info size={15} className="mt-0.5 shrink-0" />
-            Comment est calculée la compatibilité ? Lirel combine les domaines détectés dans votre texte, les compétences déclarées par les mentors, votre profil, la note
+            Comment est calculée la compatibilité ? MonMentor combine les domaines détectés dans votre texte, les compétences déclarées par les mentors, votre profil, la note
             moyenne des séances, les places disponibles et la proximité géographique. Chaque critère retenu est affiché sur la carte : la recommandation reste transparente et
             c&apos;est vous qui choisissez.
           </p>

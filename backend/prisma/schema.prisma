@@ -1,4 +1,4 @@
-// Modèle de données de la plateforme de mentorat Lirel.
+// Modèle de données de la plateforme de mentorat MonMentor.
 // Les valeurs « énumérées » (rôle, domaine, statut…) sont stockées en texte et validées
 // par l'API : elles restent identiques à celles du front (ex. « campus-france », « en-attente »).
 

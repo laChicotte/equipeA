@@ -1,4 +1,4 @@
-# Front Lirel (Next.js)
+# Front MonMentor (Next.js)
 FROM node:24-slim AS build
 WORKDIR /app
 COPY package*.json ./

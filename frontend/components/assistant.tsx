@@ -211,7 +211,7 @@ export function Assistant() {
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          aria-label="Ouvrir l'assistant Lirel"
+          aria-label="Ouvrir l'assistant MonMentor"
           className="fixed bottom-24 right-4 z-40 flex h-14 items-center gap-2 rounded-full bg-nuit pl-4 pr-5 text-sm font-semibold text-creme shadow-xl transition hover:bg-nuit-700 active:scale-95 md:bottom-6 md:right-6"
         >
           <Bot size={22} className="text-terracotta" />
@@ -222,7 +222,7 @@ export function Assistant() {
       {open && (
         <section
           role="dialog"
-          aria-label="Assistant Lirel"
+          aria-label="Assistant MonMentor"
           className="fixed inset-0 z-[55] flex animate-apparition flex-col bg-creme shadow-2xl md:inset-auto md:bottom-6 md:right-6 md:h-[min(680px,calc(100vh-7rem))] md:w-[26rem] md:overflow-hidden md:rounded-2xl md:border md:border-beige-dark"
         >
           <header className="flex items-center gap-3 border-b border-beige-dark bg-nuit px-4 py-3 text-creme">
@@ -230,8 +230,8 @@ export function Assistant() {
               <Bot size={22} />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="font-serif text-base leading-tight">Assistant Lirel</p>
-              <p className="text-xs text-creme/70">IA d&apos;orientation · vos données restent sur Lirel</p>
+              <p className="font-serif text-base leading-tight">Assistant MonMentor</p>
+              <p className="text-xs text-creme/70">IA d&apos;orientation · vos données restent sur MonMentor</p>
             </div>
             {turns.length > 0 && (
               <button onClick={() => setTurns([])} className="rounded-full p-2 text-creme/80 hover:bg-white/10" aria-label="Nouvelle conversation" title="Nouvelle conversation">
@@ -247,7 +247,7 @@ export function Assistant() {
             {turns.length === 0 && (
               <div className="space-y-4">
                 <div className="rounded-2xl rounded-tl-md bg-papier px-4 py-3 text-[0.92rem] leading-relaxed text-encre shadow-sm">
-                  Bonjour {firstName}, je suis l&apos;assistant de Lirel.{" "}
+                  Bonjour {firstName}, je suis l&apos;assistant de MonMentor.{" "}
                   {mentor
                     ? "Je peux vous aider à préparer vos séances, à formuler vos conseils et à choisir les ressources à partager."
                     : "Décrivez-moi votre situation : je vous aide à trouver le bon mentor, à préparer vos séances et à avancer sur vos objectifs."}

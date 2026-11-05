@@ -101,7 +101,7 @@ function Inscription() {
       {step === 1 ? (
         <>
           <Eyebrow>Étape 1 sur 2 · Votre compte</Eyebrow>
-          <h1 className="mt-3 font-serif text-3xl">Rejoignez la communauté Lirel.</h1>
+          <h1 className="mt-3 font-serif text-3xl">Rejoignez la communauté MonMentor.</h1>
 
           <div className="mt-7 grid grid-cols-2 gap-3" role="radiogroup" aria-label="Je souhaite">
             {(

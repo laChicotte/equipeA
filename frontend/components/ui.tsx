@@ -18,22 +18,26 @@ const TOAST_ICONS: Record<ToastKind, { icon: typeof Info; color: string }> = {
 
 /* ---------- Identité ---------- */
 
-export function LogoMark({ className, pageColor = "currentColor" }: { className?: string; pageColor?: string }) {
+/**
+ * Logo MonMentor (public/logo-mark.png, détouré depuis public/logo.jpeg).
+ * Sur fond sombre (`pageColor` clair), il est posé sur une pastille claire : le bleu marine du dessin y resterait illisible.
+ */
+export function LogoMark({ className, pageColor }: { className?: string; pageColor?: string }) {
+  const onDark = !!pageColor && /^#(f|e)/i.test(pageColor);
   return (
-    <svg viewBox="0 0 32 32" className={className} aria-hidden="true">
-      <path d="M16 9.2C12.2 6.6 7.4 6 3 7v17.2c4.4-1 9.2-.4 13 2.3z" fill={pageColor} />
-      <path d="M16 9.2c3.8-2.6 8.6-3.2 13-2.2v17.2c-4.4-1-9.2-.4-13 2.3z" fill={pageColor} opacity="0.72" />
-      <path d="M20.5 7.4v8.4l2-1.7 2 1.7V6.6c-1.4 0-2.7.3-4 .8z" fill="#C9623F" />
-    </svg>
+    <span aria-hidden="true" className={cn("inline-flex shrink-0 items-center justify-center", onDark && "rounded-lg bg-white/95 p-0.5", className)}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/logo-mark.png" alt="" className="h-full w-full object-contain" draggable={false} />
+    </span>
   );
 }
 
 export function Logo({ dark = false, className }: { dark?: boolean; className?: string }) {
   return (
     <span className={cn("inline-flex items-center gap-2", className)}>
-      <LogoMark className="h-7 w-7" pageColor={dark ? "#F6F7F9" : "#1B2533"} />
-      <span className={cn("text-[1.4rem] font-bold leading-none tracking-[-0.03em]", dark ? "text-creme" : "text-nuit")}>
-        Lirel
+      <LogoMark className="h-9 w-9" pageColor={dark ? "#F6F7F9" : undefined} />
+      <span className={cn("text-[1.35rem] font-bold leading-none tracking-[-0.03em]", dark ? "text-creme" : "text-nuit")}>
+        Mon<span className="text-[#E3740B]">Mentor</span>
       </span>
     </span>
   );

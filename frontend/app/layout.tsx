@@ -11,9 +11,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Lirel · Le mentorat qui connecte les talents",
-  description: "Lirel met en relation des jeunes talents et des professionnels expérimentés : recommandation de mentors, séances en chat ou en visio, suivi des objectifs, ressources et opportunités.",
-  icons: { icon: "/favicon.svg" },
+  title: "MonMentor · Le mentorat qui connecte les talents",
+  description: "MonMentor met en relation des jeunes talents et des professionnels expérimentés : recommandation de mentors, séances en chat ou en visio, suivi des objectifs, ressources et opportunités.",
+  icons: { icon: "/icon.png", apple: "/icon.png" },
 };
 
 export const viewport: Viewport = {

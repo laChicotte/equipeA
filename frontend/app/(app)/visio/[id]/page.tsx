@@ -11,7 +11,7 @@ import { cn, formatDate } from "@/lib/utils";
 import { Avatar, btn, field, LogoMark, Modal, StarInput } from "@/components/ui";
 
 const MEDIA_ERRORS = {
-  insecure: "Votre navigateur ne permet pas l'accès à la caméra ici : ouvrez Lirel en https (ou sur localhost).",
+  insecure: "Votre navigateur ne permet pas l'accès à la caméra ici : ouvrez MonMentor en https (ou sur localhost).",
   busy: "n'a pas pu démarrer. Elle est peut-être ouverte dans une autre application (Teams, Zoom, Appareil photo…) ou un autre navigateur : sous Windows, une webcam ne sert qu'à un programme à la fois. Fermez-la si besoin, puis cliquez sur « Réessayer ».",
   denied: "est bloqué·e par le navigateur. Cliquez sur l'icône à gauche de l'adresse, autorisez l'accès, puis « Réessayer ».",
   missing: "est introuvable sur cet appareil.",
@@ -287,7 +287,7 @@ export default function VisioPage() {
   const first = partner.name.split(" ")[0];
   // « d'Aïssatou » mais « de Mariama »
   const ofFirst = /^[aeiouyhâàéèêîïôû]/i.test(first) ? `d'${first}` : `de ${first}`;
-  const jitsiRoom = `Lirel-${(session?.id ?? id).replace(/[^a-zA-Z0-9]/g, "")}`;
+  const jitsiRoom = `MonMentor-${(session?.id ?? id).replace(/[^a-zA-Z0-9]/g, "")}`;
   const time = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
   const partnerCam = simulated ? false : call.partnerMedia.sharing || (call.partnerMedia.cam && !remoteFrozen);
   const partnerMic = simulated ? true : call.partnerMedia.mic;
@@ -440,7 +440,7 @@ export default function VisioPage() {
                   ) : (
                     <>
                       <p className="text-creme/70">En attente {ofFirst}…</p>
-                      <p className="text-xs text-creme/50">{simulated ? "" : `${first} a reçu une sonnerie sur Lirel.`}</p>
+                      <p className="text-xs text-creme/50">{simulated ? "" : `${first} a reçu une sonnerie sur MonMentor.`}</p>
                     </>
                   )}
                 </div>

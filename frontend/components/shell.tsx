@@ -104,7 +104,7 @@ function Header({ onSearch }: { onSearch: () => void }) {
   return (
     <header className="sticky top-0 z-40 border-b border-beige-dark bg-papier">
       <div className="mx-auto flex h-[3.75rem] max-w-[78rem] items-center gap-3 px-4 sm:px-6 lg:px-8">
-        <Link href="/accueil" aria-label="Lirel, accueil" className="shrink-0">
+        <Link href="/accueil" aria-label="MonMentor, accueil" className="shrink-0">
           <Logo />
         </Link>
 

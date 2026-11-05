@@ -1,4 +1,4 @@
-# Stack de production Lirel : Postgres + API + front, derrière Caddy (HTTPS automatique).
+# Stack de production MonMentor : Postgres + API + front, derrière Caddy (HTTPS automatique).
 # Lancement : cd deploy && cp .env.example .env && (éditer .env) && docker compose up -d --build
 services:
   postgres:

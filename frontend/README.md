@@ -1,8 +1,8 @@
-# Lirel — « Apprendre de ceux qui sont passés par là. »
+# MonMentor — « Apprendre de ceux qui sont passés par là. »
 
 Plateforme numérique de mentorat qui met en relation des jeunes talents (étudiants, jeunes diplômés, entrepreneurs, porteurs de projets, personnes en reconversion) avec des professionnels expérimentés.
 
-Projet réalisé pour le **hackathon « Talents connectés »** : *Le mentorat à l'ère du numérique : connecter les talents, transmettre les expériences et construire les carrières de demain*. Salon international du livre de jeunesse de Conakry, 10e édition, Mois du Numérique (4–7 novembre 2026).
+Projet réalisé pour le **hackathon « Talents connect »** : *Le mentorat à l'ère du numérique : connecter les talents, transmettre les expériences et construire les carrières de demain*. Salon international du livre de jeunesse de Conakry, 10e édition, Mois du Numérique (4–7 novembre 2026).
 
 Présentation du projet, parcours de démonstration et note de pérennisation : [docs/DOSSIER-HACKATHON.md](docs/DOSSIER-HACKATHON.md).
 
@@ -41,7 +41,7 @@ Ces deux comptes sont de vrais utilisateurs : connectez-vous avec l'un dans un n
 
 ## Fonctionnalités
 
-| Besoin (TDR §7.2) | Dans Lirel |
+| Besoin (TDR §7.2) | Dans MonMentor |
 | --- | --- |
 | Profils mentors et mentorés | Inscription en deux étapes selon le rôle ; profil éditable (`/profil`) |
 | Recherche et mise en relation | Annuaire filtrable (`/mentors`) + **recommandation guidée** (`/mentors/trouver`) |

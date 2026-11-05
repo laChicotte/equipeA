@@ -2,7 +2,7 @@
   "name": "lirel-api",
   "version": "0.1.0",
   "private": true,
-  "description": "API NestJS de la plateforme de mentorat Lirel",
+  "description": "API NestJS de la plateforme de mentorat MonMentor",
   "scripts": {
     "build": "nest build",
     "start": "node dist/main",

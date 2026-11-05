@@ -7,7 +7,7 @@ import { useStore } from "./store";
 /**
  * Appel vidéo pair-à-pair (WebRTC) entre deux membres.
  *
- * Le serveur Lirel ne fait que relayer la signalisation (offre, réponse, candidats ICE) par le flux temps réel ;
+ * Le serveur MonMentor ne fait que relayer la signalisation (offre, réponse, candidats ICE) par le flux temps réel ;
  * l'audio et la vidéo circulent directement entre les navigateurs, chiffrés (DTLS-SRTP).
  *
  * Protocole : chaque participant qui entre dans l'appel envoie « hello ». Le membre dont l'identifiant est le plus

@@ -1,6 +1,6 @@
-# Lirel : dossier de présentation
+# MonMentor : dossier de présentation
 
-**Hackathon « Talents connectés »** · Salon international du livre de jeunesse de Conakry, 10e édition · Mois du Numérique · 4–7 novembre 2026
+**Hackathon « Talents connect »** · Salon international du livre de jeunesse de Conakry, 10e édition · Mois du Numérique · 4–7 novembre 2026
 
 Ce dossier couvre les livrables 2, 3 et 4 des termes de référence (§11) : la présentation du projet, le parcours utilisateur de démonstration et la note de pérennisation. Le livrable 1 (prototype) est l'application elle-même ; le livrable 5 (pitch) s'appuie sur la partie 1.
 
@@ -16,9 +16,9 @@ Beaucoup de jeunes ont des idées, des compétences et de l'ambition. Ce qui leu
 
 ### La solution
 
-**Lirel** est une plateforme web de mentorat, utilisable sur téléphone comme sur ordinateur, qui accompagne la relation du premier contact jusqu'au résultat :
+**MonMentor** est une plateforme web de mentorat, utilisable sur téléphone comme sur ordinateur, qui accompagne la relation du premier contact jusqu'au résultat :
 
-1. **Exprimer son besoin avec ses mots.** Le mentoré écrit sa situation en langage naturel (« je veux créer mon entreprise de transformation de fruits mais je ne sais pas comment trouver un financement »). Lirel détecte les domaines concernés.
+1. **Exprimer son besoin avec ses mots.** Le mentoré écrit sa situation en langage naturel (« je veux créer mon entreprise de transformation de fruits mais je ne sais pas comment trouver un financement »). MonMentor détecte les domaines concernés.
 2. **Choisir le bon mentor.** Le moteur de recommandation classe les mentors et **explique chaque choix** : domaine d'expertise, compétences liées au besoin, avis, places disponibles, proximité géographique. La recommandation reste transparente, et c'est le mentoré qui décide.
 3. **Échanger.** Après acceptation de la demande : messagerie, réservation sur les créneaux du mentor et **séances en visio directement dans l'application**, avec chat et prise de notes.
 4. **Progresser.** Objectifs découpés en étapes et partagés avec le mentor, qui peut les commenter ; évaluation de chaque séance ; bibliothèque de ressources ; tableau d'opportunités.
@@ -40,7 +40,7 @@ Beaucoup de jeunes ont des idées, des compétences et de l'ambition. Ce qui leu
 
 Les **sept domaines** des TDR (§5) sont couverts par au moins un mentor de démonstration, y compris **l'accompagnement Campus France**, présenté avec la mention obligatoire : *l'accompagnement relève du conseil, de l'orientation et du partage d'expériences ; il ne garantit ni l'admission dans un établissement, ni l'obtention d'un visa.*
 
-### Ce qui distingue Lirel
+### Ce qui distingue MonMentor
 
 - **Une recommandation explicable**, pas une boîte noire : chaque pourcentage de compatibilité est accompagné de ses raisons.
 - **Le suivi après la mise en relation** : objectifs, notes, évaluations. Le mentorat ne s'arrête pas au premier message.

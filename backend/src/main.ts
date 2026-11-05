@@ -17,15 +17,15 @@ async function bootstrap() {
   app.enableShutdownHooks();
 
   const config = new DocumentBuilder()
-    .setTitle("API Lirel")
-    .setDescription("Plateforme de mentorat « Talents connectés » : mise en relation, séances, messagerie, objectifs, ressources et opportunités.")
+    .setTitle("API MonMentor")
+    .setDescription("Plateforme de mentorat « Talents connect » : mise en relation, séances, messagerie, objectifs, ressources et opportunités.")
     .setVersion("1.0")
     .addBearerAuth()
     .build();
   SwaggerModule.setup("docs", app, SwaggerModule.createDocument(app, config));
 
   await app.listen(port);
-  Logger.log(`API prête sur http://localhost:${port}/api · documentation : http://localhost:${port}/docs`, "Lirel");
+  Logger.log(`API prête sur http://localhost:${port}/api · documentation : http://localhost:${port}/docs`, "MonMentor");
 }
 
 void bootstrap();

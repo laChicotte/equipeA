@@ -1,5 +1,11 @@
 # Un seul point d'entrée : /api et /docs vers l'API, tout le reste vers le front.
 # DOMAIN = nom de domaine (certificat Let's Encrypt automatique) ou IP du VPS (avec CADDY_TLS="tls internal").
+{
+	# Les navigateurs n'envoient pas de SNI pour une adresse IP : sans ceci, Caddy ne sait pas
+	# quel certificat présenter et la connexion échoue (ERR_SSL_PROTOCOL_ERROR).
+	default_sni {$DOMAIN}
+}
+
 {$DOMAIN} {
 	{$CADDY_TLS}
 	encode zstd gzip

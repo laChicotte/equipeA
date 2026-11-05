@@ -58,9 +58,13 @@ export default function Landing() {
     router.push("/accueil");
   };
 
-  const mentors = state.users.filter((u) => u.role === "mentor");
+  // Seuls les mentors au profil complet (au moins un domaine) sont mis en avant sur la vitrine.
+  const mentors = state.users.filter((u) => u.role === "mentor" && u.domains.length > 0);
   const rated = state.sessions.filter((s) => s.rating);
   const avg = rated.length ? rated.reduce((s, x) => s + (x.rating ?? 0), 0) / rated.length : 0;
+  // Le défilement continu n'a de sens qu'avec assez de cartes pour remplir l'écran.
+  const marquee = mentors.length >= 5;
+  const assistantMentor = mentors.find((m) => m.domains.includes("campus-france")) ?? mentors[0];
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-creme">
@@ -111,7 +115,7 @@ export default function Landing() {
           <ol className="relative mt-14 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
             <span aria-hidden className="absolute left-[12%] right-[12%] top-[2.9rem] hidden h-px bg-gradient-to-r from-terracotta via-ciel to-or lg:block" />
             {[
-              { icon: Sparkles, tone: "bg-terracotta text-white", title: "Décrivez votre besoin", text: "En quelques phrases, avec vos mots. Lirel identifie les domaines concernés." },
+              { icon: Sparkles, tone: "bg-terracotta text-white", title: "Décrivez votre besoin", text: "En quelques phrases, avec vos mots. MonMentor identifie les domaines concernés." },
               { icon: HeartHandshake, tone: "bg-ciel text-white", title: "Choisissez votre mentor", text: "Des recommandations expliquées : expertise, compétences, avis, disponibilités." },
               { icon: Video, tone: "bg-sauge-dark text-white", title: "Échangez en chat ou en visio", text: "Demandez un créneau, votre mentor le valide, puis rejoignez la séance dans l'application." },
               { icon: Target, tone: "bg-or text-white", title: "Suivez vos progrès", text: "Objectifs, étapes et conseils du mentor. Chaque séance est évaluée." },
@@ -135,14 +139,14 @@ export default function Landing() {
               <div className="relative grid grid-cols-1 gap-8 md:grid-cols-[1fr_1.1fr] md:items-center">
                 <div>
                   <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white/80">
-                    <Bot size={14} className="text-terracotta-light" /> Assistant Lirel
+                    <Bot size={14} className="text-terracotta-light" /> Assistant MonMentor
                   </span>
                   <h3 className="mt-5 font-serif text-2xl leading-tight">Une question à 23 h ? L&apos;assistant vous oriente.</h3>
                   <p className="mt-3 text-sm leading-relaxed text-white/70">
                     Il connaît les mentors, la bibliothèque et les opportunités, et vous suggère les bons interlocuteurs. Il oriente, il ne remplace pas le mentor.
                   </p>
                 </div>
-                <AssistantDemo mentor={mentors.find((m) => m.id === "m-thierno") ?? mentors[0]} />
+                <AssistantDemo mentor={assistantMentor} />
               </div>
             </Reveal>
             <div className="grid grid-cols-1 gap-5">
@@ -172,20 +176,49 @@ export default function Landing() {
             <Eyebrow>Ils transmettent</Eyebrow>
             <h2 className="mt-3 font-serif text-[1.75rem] leading-tight sm:text-[2.4rem]">Des professionnels qui ont envie de partager.</h2>
           </div>
-          <p className="flex items-center gap-2 text-sm text-nuit-500">
-            <Star size={16} className="fill-or text-or" />
-            <span>
-              <span className="font-semibold text-nuit">{avg ? avg.toFixed(1) : "–"}/5</span> de moyenne sur {rated.length} séances évaluées
-            </span>
-          </p>
+          {rated.length > 0 ? (
+            <p className="flex items-center gap-2 rounded-full border border-beige-dark bg-creme px-4 py-2 text-sm text-nuit-500">
+              <Star size={16} className="fill-or text-or" />
+              <span>
+                <span className="font-semibold text-nuit">{avg.toFixed(1)}/5</span> sur {rated.length} séance{rated.length > 1 ? "s" : ""} évaluée{rated.length > 1 ? "s" : ""}
+              </span>
+            </p>
+          ) : (
+            <p className="flex items-center gap-2 rounded-full border border-beige-dark bg-creme px-4 py-2 text-sm text-nuit-500">
+              <ShieldCheck size={16} className="text-sauge-dark" /> Profils vérifiés par la coordination
+            </p>
+          )}
         </Reveal>
-        <div className="group relative mt-12 [mask-image:linear-gradient(90deg,transparent,#000_6%,#000_94%,transparent)]">
-          <div className="flex w-max gap-5 motion-safe:animate-defilement group-hover:[animation-play-state:paused]">
-            {[...mentors, ...mentors].map((m, i) => (
-              <MentorTile key={m.id + i} mentor={m} hidden={i >= mentors.length} />
+        {mentors.length === 0 ? (
+          <Reveal className="mx-auto mt-12 max-w-[78rem] px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-beige-dark bg-creme px-6 py-12 text-center">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-terracotta/10 text-terracotta">
+                <HeartHandshake size={22} />
+              </span>
+              <p className="max-w-md font-serif text-lg leading-snug text-nuit">Les premiers mentors arrivent. Et si c&apos;était vous ?</p>
+              <Link href="/inscription?role=mentor" className={btn.primary}>
+                Je deviens mentor <ArrowRight size={16} />
+              </Link>
+            </div>
+          </Reveal>
+        ) : marquee ? (
+          <div className="group relative mt-12 [mask-image:linear-gradient(90deg,transparent,#000_6%,#000_94%,transparent)]">
+            <div className="flex w-max gap-5 py-2 motion-safe:animate-defilement group-hover:[animation-play-state:paused]">
+              {[...mentors, ...mentors].map((m, i) => (
+                <MentorTile key={m.id + i} mentor={m} hidden={i >= mentors.length} />
+              ))}
+            </div>
+          </div>
+        ) : (
+          // Peu de mentors : grille centrée plutôt qu'un défilement qui laisserait des trous.
+          <div className="mx-auto mt-12 flex max-w-[78rem] flex-wrap justify-center gap-5 px-4 py-2 sm:px-6 lg:px-8">
+            {mentors.map((m, i) => (
+              <Reveal key={m.id} delay={i * 90}>
+                <MentorTile mentor={m} />
+              </Reveal>
             ))}
           </div>
-        </div>
+        )}
       </section>
 
       {/* Domaines */}
@@ -215,11 +248,19 @@ export default function Landing() {
                   </span>
                   <h3 className="mt-5 font-serif text-base leading-tight">{d.label}</h3>
                   <p className="mt-2 flex-1 text-sm leading-relaxed text-nuit-500">{d.description}</p>
-                  <div className="mt-5 flex items-center justify-between gap-3 border-t border-beige-dark pt-4">
-                    <AvatarStack users={people} max={3} size="xs" />
-                    <span className="text-xs font-semibold" style={{ color: d.color }}>
-                      {people.length} mentor{people.length > 1 ? "s" : ""}
-                    </span>
+                  <div className="mt-5 flex min-h-8 items-center justify-between gap-3 border-t border-beige-dark pt-4">
+                    {people.length ? (
+                      <>
+                        <AvatarStack users={people} max={3} size="xs" />
+                        <span className="text-xs font-semibold" style={{ color: d.color }}>
+                          {people.length} mentor{people.length > 1 ? "s" : ""}
+                        </span>
+                      </>
+                    ) : (
+                      <Link href="/inscription?role=mentor" className="inline-flex items-center gap-1 text-xs font-medium text-nuit-500 transition hover:text-nuit">
+                        Ouvert aux mentors <ArrowRight size={12} className="transition group-hover:translate-x-0.5" />
+                      </Link>
+                    )}
                   </div>
                 </Reveal>
               );
@@ -247,7 +288,7 @@ export default function Landing() {
             <Eyebrow>Pour qui ?</Eyebrow>
             <h2 className="mt-3 font-serif text-[1.75rem] leading-tight sm:text-[2.4rem]">Vous avez l&apos;ambition. Il vous manque le bon conseil.</h2>
             <p className="mt-5 leading-relaxed text-nuit-500">
-              Beaucoup de jeunes ont des idées, des compétences et de l&apos;ambition, mais pas accès aux réseaux et aux expériences qui font la différence. Lirel rend ce
+              Beaucoup de jeunes ont des idées, des compétences et de l&apos;ambition, mais pas accès aux réseaux et aux expériences qui font la différence. MonMentor rend ce
               conseil accessible, depuis un simple téléphone.
             </p>
             <Link href="/inscription" className={btn.primary + " mt-8"}>
@@ -297,15 +338,43 @@ export default function Landing() {
         </Reveal>
       </section>
 
-      <footer className="bg-papier">
-        <div className="mx-auto flex max-w-[78rem] flex-col items-center justify-between gap-6 px-4 py-10 text-center text-sm text-nuit-500 sm:flex-row sm:px-6 sm:text-left lg:px-8">
+      <footer className="border-t border-beige-dark bg-papier">
+        <div className="mx-auto grid max-w-[78rem] grid-cols-1 gap-8 px-4 py-12 text-sm text-nuit-500 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr] lg:px-8">
           <div>
-            <Logo className="scale-90" />
-            <p className="mt-2 max-w-sm text-xs">Hackathon « Talents connectés » · Salon international du livre de jeunesse de Conakry · Mois du Numérique 2026</p>
+            <Logo />
+            <p className="mt-3 max-w-sm leading-relaxed">Apprendre de ceux qui sont passés par là. Le mentorat accessible depuis un simple téléphone.</p>
           </div>
-          <p>
-            Comptes démo : <span className="font-medium text-nuit">{DEMO_EMAIL}</span> (mentorée) · <span className="font-medium text-nuit">{DEMO_MENTOR_EMAIL}</span> (mentor) —
-            mot de passe <span className="font-medium text-nuit">{DEMO_PASSWORD}</span>
+          <nav aria-label="Plan du site">
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-nuit">Découvrir</p>
+            <ul className="mt-3 space-y-2">
+              {ANCHORS.map(({ href, label }) => (
+                <li key={href}>
+                  <a href={href} className="transition hover:text-nuit">
+                    {label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-nuit">Visite guidée</p>
+            <ul className="mt-3 space-y-2">
+              <li>
+                <button onClick={() => tryDemo(DEMO_EMAIL)} className="inline-flex items-center gap-1.5 transition hover:text-nuit">
+                  Espace mentorée <ArrowRight size={13} />
+                </button>
+              </li>
+              <li>
+                <button onClick={() => tryDemo(DEMO_MENTOR_EMAIL)} className="inline-flex items-center gap-1.5 transition hover:text-nuit">
+                  Espace mentor <ArrowRight size={13} />
+                </button>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div className="border-t border-beige-dark">
+          <p className="mx-auto max-w-[78rem] px-4 py-5 text-xs text-nuit-500 sm:px-6 lg:px-8">
+            Hackathon « Talents connect » · Salon international du livre de jeunesse de Conakry, 10ᵉ édition · Mois du Numérique 2026
           </p>
         </div>
       </footer>
@@ -351,11 +420,26 @@ function Hero({ mentors, avg, sessions, onDemo }: { mentors: User[]; avg: number
     return () => clearTimeout(timer);
   }, [touched]);
 
-  const detected = useMemo(() => inferDomains(need).slice(0, 3), [need]);
+  // Analyse calée sur une pause de frappe : les résultats ne clignotent plus à chaque lettre.
+  const [query, setQuery] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setQuery(need), 320);
+    return () => clearTimeout(t);
+  }, [need]);
+
+  const detected = useMemo(() => inferDomains(query).slice(0, 3), [query]);
   const matches = useMemo(
-    () => (need.trim().length < 8 ? [] : recommendMentors(state, { id: "visiteur", domains: [], need, city: "Conakry" }).filter((m) => m.score > 0).slice(0, 3)),
-    [state, need],
+    () =>
+      query.trim().length < 8
+        ? []
+        : recommendMentors(state, { id: "visiteur", domains: [], need: query, city: "Conakry" })
+            // Seuls les mentors réellement liés au besoin (domaine ou compétence) sont proposés.
+            .filter((m) => m.score >= MIN_SCORE)
+            .slice(0, 3),
+    [state, query],
   );
+  const searching = query.trim().length >= 8;
+  const slots = [...matches, ...PLACEHOLDERS.slice(matches.length)];
 
   const pick = (s: string) => {
     setTouched(true);
@@ -379,7 +463,7 @@ function Hero({ mentors, avg, sessions, onDemo }: { mentors: User[]; avg: number
             </span>
           </h1>
           <p className="mt-6 max-w-lg text-lg leading-relaxed text-white/70">
-            Lirel met en relation les jeunes talents avec des professionnels qui sont passés par là. Décrivez votre besoin : on vous présente les bonnes personnes.
+            MonMentor met en relation les jeunes talents avec des professionnels qui sont passés par là. Décrivez votre besoin : on vous présente les bonnes personnes.
           </p>
 
           <form
@@ -402,7 +486,6 @@ function Hero({ mentors, avg, sessions, onDemo }: { mentors: User[]; avg: number
                 placeholder="Décrivez votre besoin avec vos mots…"
                 className="min-h-[3.2rem] flex-1 resize-none bg-transparent text-[0.95rem] leading-relaxed outline-none placeholder:text-nuit-500"
               />
-              {!touched && <span aria-hidden className="-ml-3 mt-1 h-5 w-0.5 bg-terracotta motion-safe:animate-curseur" />}
             </label>
             <div className="mt-1 flex items-center justify-between gap-3 border-t border-beige-dark px-2 pt-2">
               <div className="flex min-w-0 flex-wrap gap-1.5">
@@ -449,41 +532,55 @@ function Hero({ mentors, avg, sessions, onDemo }: { mentors: User[]; avg: number
         {/* Résultats en direct */}
         <div className="relative">
           <div className="absolute -inset-px rounded-[1.4rem] bg-gradient-to-br from-white/25 via-white/5 to-white/15" />
-          <div className="relative rounded-[1.35rem] bg-[#212d3d]/90 p-4 backdrop-blur sm:p-5">
+          <div className="relative rounded-[1.35rem] bg-[#1f2a39]/85 p-4 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.7)] backdrop-blur-md sm:p-5">
             <div className="flex items-center justify-between gap-3 px-1">
-              <p className="flex items-center gap-2 text-sm font-medium">
-                <span className="h-2 w-2 rounded-full bg-[#5fd08a] motion-safe:animate-pulse" />
-                {matches.length ? `${matches.length} mentors correspondent` : "En attente de votre besoin…"}
+              <p key={matches.length + String(searching)} className="flex animate-apparition items-center gap-2 text-sm font-medium text-white/90">
+                <span className={cn("h-2 w-2 rounded-full transition-colors duration-500", matches.length ? "bg-[#5fd08a]" : "bg-white/30 motion-safe:animate-pulse")} />
+                {matches.length
+                  ? `${matches.length} mentor${matches.length > 1 ? "s correspondent" : " correspond"} à votre besoin`
+                  : searching
+                    ? "Pas encore de mentor pour ce besoin"
+                    : "En attente de votre besoin…"}
               </p>
-              <span className="text-xs text-white/45">Recommandation en direct</span>
+              <span className="hidden text-xs text-white/40 sm:inline">Recommandation en direct</span>
             </div>
-            <ul className="mt-4 space-y-3">
-              {(matches.length ? matches : PLACEHOLDERS).map((m, i) =>
+            {/* Toujours trois emplacements : la carte garde la même hauteur quels que soient les résultats. */}
+            <ul className="mt-4 space-y-2.5">
+              {slots.map((m, i) =>
                 "mentor" in m ? (
-                  <li key={m.mentor.id} className="animate-apparition rounded-xl bg-papier p-4 text-nuit" style={{ animationDelay: `${i * 70}ms` }}>
-                    <div className="flex items-start gap-3">
+                  <li
+                    key={m.mentor.id}
+                    className="flex min-h-[6.25rem] animate-apparition items-center rounded-2xl border border-white/10 bg-white/[0.07] p-4 transition-colors duration-300 hover:bg-white/[0.1]"
+                    style={{ animationDelay: `${i * 90}ms`, animationFillMode: "backwards" }}
+                  >
+                    <div className="flex w-full items-start gap-3">
                       <Avatar user={m.mentor} size="md" />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
-                          <p className="flex min-w-0 items-center gap-1 font-semibold">
+                          <p className="flex min-w-0 items-center gap-1 font-semibold text-white">
                             <span className="truncate">{m.mentor.name}</span> <Verified user={m.mentor} size={14} />
                           </p>
-                          <span className={cn("shrink-0 rounded-md px-2 py-0.5 text-xs font-bold tabular-nums", i === 0 ? "bg-sauge-dark text-white" : "bg-sauge-light text-sauge-dark")}>{m.score} %</span>
+                          <span className={cn("shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold tabular-nums", i === 0 ? "bg-[#5fd08a]/20 text-[#8fe3ad]" : "bg-white/10 text-white/70")}>
+                            {Math.min(99, Math.round(m.score))} %
+                          </span>
                         </div>
-                        <p className="truncate text-xs text-nuit-500">{m.mentor.title}</p>
-                        <span className="mt-2.5 block h-1 overflow-hidden rounded-full bg-beige">
-                          <span className="block h-full rounded-full bg-sauge-dark transition-all duration-700" style={{ width: `${m.score}%` }} />
+                        <p className="truncate text-xs text-white/50">{m.mentor.title}</p>
+                        <span className="mt-2.5 block h-1 overflow-hidden rounded-full bg-white/10">
+                          <span
+                            className="block h-full origin-left rounded-full bg-gradient-to-r from-[#5fd08a]/70 to-[#5fd08a] transition-[width] duration-1000 ease-out"
+                            style={{ width: `${Math.min(100, m.score)}%` }}
+                          />
                         </span>
-                        {m.reasons[0] && <p className="mt-2 line-clamp-1 text-xs text-encre">{m.reasons[0]}</p>}
+                        <p className="mt-2 line-clamp-1 min-h-4 text-xs text-white/60">{m.reasons[0] ?? ""}</p>
                       </div>
                     </div>
                   </li>
                 ) : (
-                  <li key={i} className="flex items-center gap-3 rounded-xl border border-dashed border-white/15 p-4">
-                    <span className="h-10 w-10 rounded-full bg-white/10" />
+                  <li key={`vide-${i}`} className="flex min-h-[6.25rem] items-center gap-3 rounded-2xl border border-dashed border-white/10 p-4 transition-opacity duration-500">
+                    <span className="h-10 w-10 shrink-0 rounded-full bg-white/[0.06]" />
                     <span className="flex-1 space-y-2">
-                      <span className="block h-2.5 w-1/2 rounded bg-white/10" />
-                      <span className="block h-2 w-3/4 rounded bg-white/5" />
+                      <span className="block h-2.5 w-1/2 rounded-full bg-white/[0.08]" />
+                      <span className="block h-2 w-3/4 rounded-full bg-white/[0.05]" />
                     </span>
                   </li>
                 ),
@@ -500,18 +597,30 @@ function Hero({ mentors, avg, sessions, onDemo }: { mentors: User[]; avg: number
       </div>
 
       {/* Chiffres */}
-      <div className="relative border-t border-white/10">
-        <dl className="mx-auto grid max-w-[78rem] grid-cols-2 px-4 sm:px-6 lg:grid-cols-4 lg:px-8">
+      <div className="relative border-t border-white/[0.08] bg-gradient-to-b from-white/[0.03] to-transparent">
+        {/* Une valeur encore vide (0 séance, aucune note) laisse place à un atout de la plateforme plutôt qu'à un « 0 » ou un « – ». */}
+        <dl className="mx-auto grid max-w-[78rem] grid-cols-1 gap-3 px-4 py-6 sm:grid-cols-2 sm:px-6 lg:grid-cols-4 lg:gap-4 lg:px-8 lg:py-8">
           {[
-            { value: mentors.length, label: "mentors vérifiés" },
-            { value: DOMAINS.length, label: "domaines d'accompagnement" },
-            { value: sessions, label: "séances programmées" },
-            { value: avg ? avg.toFixed(1) + "/5" : "–", label: "note moyenne des séances" },
-          ].map((s, i) => (
-            <div key={s.label} className={cn("py-6", i > 0 && "lg:border-l lg:border-white/10 lg:pl-8")}>
-              <dt className="sr-only">{s.label}</dt>
-              <dd className="font-serif text-3xl tabular-nums">{s.value}</dd>
-              <dd className="mt-1 text-sm text-white/55">{s.label}</dd>
+            mentors.length
+              ? { icon: ShieldCheck, tone: "text-[#8fe3ad] bg-[#5fd08a]/12", value: String(mentors.length), label: mentors.length > 1 ? "mentors vérifiés" : "mentor vérifié" }
+              : { icon: ShieldCheck, tone: "text-[#8fe3ad] bg-[#5fd08a]/12", value: "Vérifiés", label: "des mentors expérimentés" },
+            { icon: Compass, tone: "text-[#9cc3ea] bg-[#2f5d8a]/30", value: String(DOMAINS.length), label: "domaines d'accompagnement" },
+            sessions
+              ? { icon: CalendarDays, tone: "text-[#f3b08f] bg-terracotta/15", value: String(sessions), label: sessions > 1 ? "séances programmées" : "séance programmée" }
+              : { icon: Video, tone: "text-[#f3b08f] bg-terracotta/15", value: "Chat + visio", label: "intégrés à l'application" },
+            avg
+              ? { icon: Star, tone: "text-[#f1cf7a] bg-or/15", value: `${avg.toFixed(1)}/5`, label: "note moyenne des séances" }
+              : { icon: HeartHandshake, tone: "text-[#f1cf7a] bg-or/15", value: "Gratuit", label: "pour les mentorés" },
+          ].map(({ icon: Icon, tone, value, label }) => (
+            <div key={label} className="flex items-center gap-4 rounded-2xl border border-white/[0.06] bg-white/[0.03] px-5 py-4 transition-colors duration-300 hover:bg-white/[0.06]">
+              <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-xl", tone)}>
+                <Icon size={20} strokeWidth={1.75} />
+              </span>
+              <div className="min-w-0">
+                <dt className="sr-only">{label}</dt>
+                <dd className="font-serif text-2xl leading-tight tabular-nums text-white">{value}</dd>
+                <dd className="truncate text-sm text-white/55">{label}</dd>
+              </div>
             </div>
           ))}
         </dl>
@@ -521,6 +630,9 @@ function Hero({ mentors, avg, sessions, onDemo }: { mentors: User[]; avg: number
 }
 
 const PLACEHOLDERS = [{ id: 1 }, { id: 2 }, { id: 3 }];
+
+/** Score minimum pour proposer un mentor : un domaine ou une compétence en commun avec le besoin. */
+const MIN_SCORE = 25;
 
 const CHIPS: [string, string][] = [
   ["Campus France", EXAMPLES[0]],

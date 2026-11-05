@@ -1,4 +1,4 @@
-# Base PostgreSQL de développement pour Lirel.
+# Base PostgreSQL de développement pour MonMentor.
 # Port 5442 sur la machine (le 5432 est souvent déjà utilisé par d'autres projets).
 services:
   postgres:
