@@ -1,0 +1,236 @@
+// Modèle de données de la plateforme de mentorat Lirel.
+// Les valeurs « énumérées » (rôle, domaine, statut…) sont stockées en texte et validées
+// par l'API : elles restent identiques à celles du front (ex. « campus-france », « en-attente »).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  handle       String
+  city         String   @default("")
+  bio          String   @default("")
+  role         String // "mentor" | "mentore"
+  color        String
+  avatar       String?
+  joinedAt     DateTime @default(now())
+  domains      String[]
+
+  // Mentoré
+  profile String?
+  need    String?
+
+  // Mentor
+  title        String?
+  organization String?
+  years        Int?
+  skills       String[]
+  languages    String[]
+  formats      String[]
+  slots        Json? // [{ day: 1..7, hour: 0..23 }]
+  capacity     Int?
+  verified     Boolean  @default(false)
+
+  /// Compte de démonstration animé automatiquement (réponses simulées)
+  bot Boolean @default(false)
+
+  mentoring       Mentorship[]          @relation("MentorOf")
+  mentored        Mentorship[]          @relation("MenteeOf")
+  sessionsGiven   Session[]             @relation("SessionMentor")
+  sessionsTaken   Session[]             @relation("SessionMentee")
+  goals           Goal[]                @relation("GoalOwner")
+  goalsFollowed   Goal[]                @relation("GoalMentor")
+  convA           Conversation[]        @relation("ConvA")
+  convB           Conversation[]        @relation("ConvB")
+  messages        Message[]
+  resources       Resource[]
+  saves           ResourceSave[]
+  opportunities   Opportunity[]
+  interests       OpportunityInterest[]
+  notifications   Notification[]        @relation("NotifTarget")
+  notifActions    Notification[]        @relation("NotifActor")
+  favorites       Favorite[]            @relation("FavOwner")
+  favoritedBy     Favorite[]            @relation("FavMentor")
+
+  @@index([role])
+}
+
+model Mentorship {
+  id         String    @id @default(cuid())
+  mentorId   String
+  menteeId   String
+  domain     String
+  axis       String
+  message    String
+  status     String // "en-attente" | "active" | "terminee" | "refusee"
+  createdAt  DateTime  @default(now())
+  acceptedAt DateTime?
+
+  mentor User @relation("MentorOf", fields: [mentorId], references: [id], onDelete: Cascade)
+  mentee User @relation("MenteeOf", fields: [menteeId], references: [id], onDelete: Cascade)
+
+  @@index([mentorId, status])
+  @@index([menteeId, status])
+}
+
+/// Conversation entre deux membres ; memberAId < memberBId (ordre lexicographique) pour l'unicité.
+model Conversation {
+  id        String    @id @default(cuid())
+  memberAId String
+  memberBId String
+  readA     DateTime?
+  readB     DateTime?
+  createdAt DateTime  @default(now())
+
+  memberA  User      @relation("ConvA", fields: [memberAId], references: [id], onDelete: Cascade)
+  memberB  User      @relation("ConvB", fields: [memberBId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@unique([memberAId, memberBId])
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  userId         String
+  text           String
+  system         Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+model Session {
+  id       String   @id @default(cuid())
+  mentorId String
+  menteeId String
+  startsAt DateTime
+  duration Int
+  format   String // "visio" | "chat" | "presentiel"
+  topic    String
+  status   String // "planifiee" | "terminee" | "annulee"
+  notes    String?
+  rating   Int?
+  review   String?
+
+  mentor User @relation("SessionMentor", fields: [mentorId], references: [id], onDelete: Cascade)
+  mentee User @relation("SessionMentee", fields: [menteeId], references: [id], onDelete: Cascade)
+
+  @@index([mentorId, startsAt])
+  @@index([menteeId, startsAt])
+}
+
+model Goal {
+  id         String   @id @default(cuid())
+  userId     String
+  mentorId   String?
+  domain     String
+  title      String
+  dueAt      DateTime
+  mentorNote String?
+  createdAt  DateTime @default(now())
+
+  user   User   @relation("GoalOwner", fields: [userId], references: [id], onDelete: Cascade)
+  mentor User?  @relation("GoalMentor", fields: [mentorId], references: [id], onDelete: SetNull)
+  steps  Step[]
+
+  @@index([userId])
+}
+
+model Step {
+  id       String  @id @default(cuid())
+  goalId   String
+  text     String
+  done     Boolean @default(false)
+  position Int
+
+  goal Goal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+}
+
+model Resource {
+  id        String   @id @default(cuid())
+  title     String
+  kind      String // "guide" | "checklist" | "modele" | "livre" | "video"
+  domain    String
+  authorId  String
+  summary   String
+  minutes   Int
+  body      Json // [{ heading, text }]
+  createdAt DateTime @default(now())
+
+  author User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  saves  ResourceSave[]
+}
+
+model ResourceSave {
+  userId     String
+  resourceId String
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@id([userId, resourceId])
+}
+
+model Opportunity {
+  id           String   @id @default(cuid())
+  title        String
+  organization String
+  kind         String // "stage" | "emploi" | "bourse" | "concours" | "incubation" | "evenement"
+  domain       String
+  city         String
+  deadline     DateTime
+  description  String
+  authorId     String
+  createdAt    DateTime @default(now())
+
+  author     User                  @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  interested OpportunityInterest[]
+}
+
+model OpportunityInterest {
+  userId        String
+  opportunityId String
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@id([userId, opportunityId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  actorId   String?
+  text      String
+  href      String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user  User  @relation("NotifTarget", fields: [userId], references: [id], onDelete: Cascade)
+  actor User? @relation("NotifActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+}
+
+model Favorite {
+  userId   String
+  mentorId String
+
+  user   User @relation("FavOwner", fields: [userId], references: [id], onDelete: Cascade)
+  mentor User @relation("FavMentor", fields: [mentorId], references: [id], onDelete: Cascade)
+
+  @@id([userId, mentorId])
+}
