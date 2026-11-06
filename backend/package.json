@@ -11,7 +11,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset --force",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "db:photos": "tsx prisma/photos.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

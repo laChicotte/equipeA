@@ -1,6 +1,7 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { createSeed, DEMO_MENTOR_ID, DEMO_PASSWORD, DEMO_USER_ID } from "./demo-data";
+import { seedAvatarUrl, seedPhoto } from "./seed-photos";
 
 /**
  * Vide la base puis insère les données de démonstration.
@@ -11,6 +12,11 @@ export async function seedDatabase(prisma: PrismaClient) {
   const seed = createSeed();
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
   const emailOf = new Map(seed.accounts.map((a) => [a.userId, a.email.toLowerCase()]));
+  const photos = seed.users.flatMap((u) => {
+    const data = seedPhoto(u.id);
+    return data ? [{ userId: u.id, data, mime: "image/jpeg" }] : [];
+  });
+  const withPhoto = new Set(photos.map((p) => p.userId));
   const sortPair = (a: string, b: string) => [a, b].sort() as [string, string];
 
   await prisma.$transaction(async (tx) => {
@@ -41,7 +47,7 @@ export async function seedDatabase(prisma: PrismaClient) {
           bio: u.bio,
           role: u.role,
           color: u.color,
-          avatar: u.avatar,
+          avatar: withPhoto.has(u.id) ? seedAvatarUrl(u.id) : u.avatar,
           joinedAt: new Date(u.joinedAt),
           domains: u.domains,
           profile: u.profile,
@@ -60,6 +66,7 @@ export async function seedDatabase(prisma: PrismaClient) {
       ),
     });
 
+    await tx.userPhoto.createMany({ data: photos });
     await tx.mentorship.createMany({
       data: seed.mentorships.map((m) => ({ ...m, createdAt: new Date(m.createdAt), acceptedAt: m.acceptedAt ? new Date(m.acceptedAt) : null })),
     });
