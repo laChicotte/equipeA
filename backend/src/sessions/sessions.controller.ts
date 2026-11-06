@@ -85,16 +85,18 @@ export class SessionsController {
       throw new BadRequestException("Ce créneau ne fait pas partie des disponibilités du mentor. Choisissez l'une de ses heures, ou écrivez-lui pour un horaire exceptionnel.");
     }
 
-    const clash = await this.prisma.session.findFirst({ where: { mentorId: dto.mentorId, startsAt, status: "planifiee" } });
-    if (clash) throw new BadRequestException(byMentor ? "Vous avez déjà une séance à cette heure-là." : "Ce créneau vient d'être réservé. Choisissez-en un autre.");
-    if (!byMentor) {
-      const dup = await this.prisma.session.findFirst({ where: { mentorId: dto.mentorId, menteeId: dto.menteeId, startsAt, status: "demandee" } });
-      if (dup) throw new BadRequestException("Vous avez déjà demandé ce créneau : votre mentor va vous répondre.");
-    }
-
     const topic = dto.topic.trim();
     const status = byMentor ? "planifiee" : "demandee";
-    const session = await this.prisma.session.create({ data: { ...dto, topic, startsAt, status } });
+    // Vérification et création sous verrou : deux réservations simultanées du même créneau ne peuvent pas aboutir toutes les deux.
+    const session = await this.sessions.withSlotLock(dto.mentorId, startsAt, async (tx) => {
+      const clash = await tx.session.findFirst({ where: { mentorId: dto.mentorId, startsAt, status: "planifiee" } });
+      if (clash) throw new BadRequestException(byMentor ? "Vous avez déjà une séance à cette heure-là." : "Ce créneau vient d'être réservé. Choisissez-en un autre.");
+      if (!byMentor) {
+        const dup = await tx.session.findFirst({ where: { mentorId: dto.mentorId, menteeId: dto.menteeId, startsAt, status: "demandee" } });
+        if (dup) throw new BadRequestException("Vous avez déjà demandé ce créneau : votre mentor va vous répondre.");
+      }
+      return tx.session.create({ data: { ...dto, topic, startsAt, status } });
+    });
     const other = byMentor ? dto.menteeId : dto.mentorId;
     if (byMentor) {
       await this.messages.send(me, other, `Séance programmée le ${longDate(startsAt)} · ${topic}`, { system: true });

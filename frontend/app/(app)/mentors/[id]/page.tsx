@@ -9,7 +9,7 @@ import { CAMPUS_FRANCE_NOTICE, DAYS, domainById, FORMATS, OPPORTUNITY_KINDS, RES
 import { activeMentees, mentorRating, nextSlots } from "@/lib/matching";
 import { cn, formatDate, plural } from "@/lib/utils";
 import { Avatar, btn, DomainBadge, Eyebrow, Stars, Verified } from "@/components/ui";
-import { BookingModal, FORMAT_ICONS, RequestModal } from "@/components/mentoring";
+import { BookingModal, EndMentorshipModal, FORMAT_ICONS, RequestModal } from "@/components/mentoring";
 
 export default function MentorPage() {
   return (
@@ -25,6 +25,7 @@ function MentorProfile() {
   const { state, me, toggleFavorite } = useStore();
   const [requestOpen, setRequestOpen] = useState(false);
   const [bookingOpen, setBookingOpen] = useState(false);
+  const [endOpen, setEndOpen] = useState(false);
   const mentor = state.users.find((u) => u.id === id && u.role === "mentor");
 
   const ship = me ? state.mentorships.find((m) => m.mentorId === id && m.menteeId === me.id && (m.status === "active" || m.status === "en-attente")) : undefined;
@@ -90,6 +91,9 @@ function MentorProfile() {
                     </Link>
                     <button onClick={() => setBookingOpen(true)} className={btn.accent}>
                       <CalendarPlus size={16} /> Demander une séance
+                    </button>
+                    <button onClick={() => setEndOpen(true)} className={btn.quiet}>
+                      Clôturer le mentorat
                     </button>
                   </>
                 ) : ship ? (
@@ -270,6 +274,7 @@ function MentorProfile() {
 
       {me && canAsk && <RequestModal mentor={mentor} open={requestOpen} onClose={() => setRequestOpen(false)} />}
       {me && canAsk && active && <BookingModal mentor={mentor} mentee={me} open={bookingOpen} onClose={() => setBookingOpen(false)} />}
+      {ship && active && <EndMentorshipModal mentorship={ship} other={mentor} open={endOpen} onClose={() => setEndOpen(false)} />}
     </div>
   );
 }

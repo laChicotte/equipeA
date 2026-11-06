@@ -48,7 +48,7 @@ function Inscription() {
 
   const next = (e: React.FormEvent) => {
     e.preventDefault();
-    if (form.password.length < 6) return setError("Le mot de passe doit contenir au moins 6 caractères.");
+    if (form.password.length < 8) return setError("Le mot de passe doit contenir au moins 8 caractères.");
     setError(null);
     setStep(2);
   };
@@ -142,7 +142,7 @@ function Inscription() {
             </div>
             <label className="block">
               <span className="mb-1.5 block text-sm font-medium">Mot de passe</span>
-              <input type="password" required value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className={field} placeholder="6 caractères minimum" autoComplete="new-password" />
+              <input type="password" required value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className={field} placeholder="8 caractères minimum" autoComplete="new-password" />
             </label>
             {error && <p className="rounded-xl bg-terracotta-light/60 px-4 py-2.5 text-sm text-terracotta-dark">{error}</p>}
             <button type="submit" className={btn.primary + " w-full py-3 text-base"}>

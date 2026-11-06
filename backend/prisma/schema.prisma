@@ -60,6 +60,7 @@ model User {
   notifActions    Notification[]        @relation("NotifActor")
   favorites       Favorite[]            @relation("FavOwner")
   favoritedBy     Favorite[]            @relation("FavMentor")
+  photo           UserPhoto?
 
   @@index([role])
 }
@@ -233,4 +234,14 @@ model Favorite {
   mentor User @relation("FavMentor", fields: [mentorId], references: [id], onDelete: Cascade)
 
   @@id([userId, mentorId])
+}
+
+/// Photo de profil (déjà recadrée et compressée par le navigateur) ; servie par GET /api/users/:id/photo.
+model UserPhoto {
+  userId    String   @id
+  data      Bytes
+  mime      String
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

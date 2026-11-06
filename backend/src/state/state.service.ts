@@ -35,30 +35,53 @@ export function toUser(u: DbUser): User {
   };
 }
 
+/** Profil réduit d'un mentoré sans lien avec l'utilisateur (auteur d'un avis public, d'une opportunité…). */
+function toPublicUser(u: DbUser): User {
+  return { ...toUser(u), city: "", bio: "", profile: undefined, need: undefined };
+}
+
 /**
- * Instantané de toutes les données visibles par l'utilisateur, dans la forme attendue par le front.
- * Les données privées des autres (messages de demande, notes de séance, conversations, objectifs)
- * ne sont jamais renvoyées.
+ * Instantané des données visibles par l'utilisateur, dans la forme attendue par le front.
+ * Tout est filtré dans les requêtes : ses propres données, les profils publics des mentors,
+ * et le strict nécessaire sur les autres (avis publics, créneaux déjà pris, places occupées).
+ * Les données privées des autres (messages de demande, notes de séance, conversations, objectifs,
+ * profils de mentorés sans lien) ne sont jamais renvoyées.
  */
 @Injectable()
 export class StateService {
   constructor(private readonly prisma: PrismaService) {}
 
   async snapshot(meId: string | null): Promise<State> {
-    const me = meId ? await this.prisma.user.findUnique({ where: { id: meId } }) : null;
+    const me = meId ? await this.prisma.user.findUnique({ where: { id: meId }, select: { id: true } }) : null;
     const id = me?.id ?? null;
+    const now = new Date();
+    // « M'implique » / « ne m'implique pas » pour les séances et les mentorats.
+    const mine = id ? [{ mentorId: id }, { menteeId: id }] : [];
+    const notMine = id ? { NOT: mine } : {};
 
-    const [users, mentorships, sessions, resources, opportunities] = await Promise.all([
-      this.prisma.user.findMany({ orderBy: { joinedAt: "asc" } }),
-      this.prisma.mentorship.findMany({ orderBy: { createdAt: "desc" } }),
-      this.prisma.session.findMany({ orderBy: { startsAt: "asc" } }),
+    const [mentors, myMentorships, otherActive, mySessions, publicSessions, resources, opportunities] = await Promise.all([
+      this.prisma.user.findMany({ where: { role: "mentor" }, orderBy: { joinedAt: "asc" } }),
+      id ? this.prisma.mentorship.findMany({ where: { OR: mine }, orderBy: { createdAt: "desc" } }) : [],
+      // Mentorats des autres : uniquement les actifs, pour compter les places prises chez chaque mentor.
+      this.prisma.mentorship.findMany({
+        where: { status: "active", ...notMine },
+        select: { id: true, mentorId: true, domain: true, axis: true, status: true, createdAt: true, acceptedAt: true },
+      }),
+      id ? this.prisma.session.findMany({ where: { OR: mine }, orderBy: { startsAt: "asc" } }) : [],
+      // Séances des autres : notes et avis (profil des mentors), séances terminées (compteur)
+      // et créneaux à venir déjà pris (pour ne pas les proposer).
+      this.prisma.session.findMany({
+        where: {
+          ...notMine,
+          OR: [{ rating: { not: null } }, { status: "terminee" }, { status: { in: ["planifiee", "demandee"] }, startsAt: { gte: now } }],
+        },
+        select: { id: true, mentorId: true, menteeId: true, startsAt: true, duration: true, format: true, topic: true, status: true, rating: true, review: true },
+      }),
       this.prisma.resource.findMany({ orderBy: { createdAt: "desc" }, include: { saves: id ? { where: { userId: id } } : false } }),
-      this.prisma.opportunity.findMany({ orderBy: { createdAt: "desc" }, include: { interested: true } }),
+      this.prisma.opportunity.findMany({ orderBy: { createdAt: "desc" }, include: { interested: { select: { userId: true } } } }),
     ]);
 
-    const mine = (a: string, b: string) => !!id && (a === id || b === id);
-    const activeMentees = id ? mentorships.filter((m) => m.mentorId === id && m.status === "active").map((m) => m.menteeId) : [];
-
+    const followed = myMentorships.filter((m) => m.mentorId === id && m.status === "active").map((m) => m.menteeId);
     const [conversations, goals, notifications, favorites] = id
       ? await Promise.all([
           this.prisma.conversation.findMany({
@@ -66,7 +89,7 @@ export class StateService {
             include: { messages: { orderBy: { createdAt: "asc" } } },
           }),
           this.prisma.goal.findMany({
-            where: { OR: [{ userId: id }, { mentorId: id }, { userId: { in: activeMentees } }] },
+            where: { OR: [{ userId: id }, { mentorId: id }, { userId: { in: followed } }] },
             include: { steps: { orderBy: { position: "asc" } } },
             orderBy: { createdAt: "desc" },
           }),
@@ -75,41 +98,90 @@ export class StateService {
         ])
       : [[], [], [], []];
 
+    // Membres en relation avec moi : profil complet. Simples auteurs publics : profil réduit.
+    const related = new Set<string>(id ? [id] : []);
+    for (const m of myMentorships) related.add(m.mentorId).add(m.menteeId);
+    for (const s of mySessions) related.add(s.mentorId).add(s.menteeId);
+    for (const c of conversations) related.add(c.memberAId).add(c.memberBId);
+    for (const g of goals) {
+      related.add(g.userId);
+      if (g.mentorId) related.add(g.mentorId);
+    }
+    const visible = new Set(related);
+    for (const n of notifications) if (n.actorId) visible.add(n.actorId);
+    for (const s of publicSessions) if (s.review) visible.add(s.menteeId);
+    for (const o of opportunities) visible.add(o.authorId);
+
+    const mentorIds = new Set(mentors.map((u) => u.id));
+    const others = await this.prisma.user.findMany({ where: { id: { in: [...visible].filter((x) => !mentorIds.has(x)) } } });
+    const users = [...mentors, ...others].sort((a, b) => a.joinedAt.getTime() - b.joinedAt.getTime());
+
     return {
       version: STATE_VERSION,
       currentUserId: id,
-      // Les membres sans compte de mentor ne sont visibles que connectés.
-      users: users.filter((u) => id || u.role === "mentor").map(toUser),
-      mentorships: mentorships.map(
-        (m): Mentorship => ({
-          id: m.id,
-          mentorId: m.mentorId,
-          menteeId: m.menteeId,
-          domain: m.domain as Mentorship["domain"],
-          axis: m.axis as Mentorship["axis"],
-          // Le message de demande reste privé entre les deux personnes.
-          message: mine(m.mentorId, m.menteeId) ? m.message : "",
-          status: m.status as Mentorship["status"],
-          createdAt: m.createdAt.toISOString(),
-          acceptedAt: iso(m.acceptedAt),
+      users: users.map((u) => (u.role === "mentor" || related.has(u.id) ? toUser(u) : toPublicUser(u))),
+      mentorships: [
+        ...myMentorships.map(
+          (m): Mentorship => ({
+            id: m.id,
+            mentorId: m.mentorId,
+            menteeId: m.menteeId,
+            domain: m.domain as Mentorship["domain"],
+            axis: m.axis as Mentorship["axis"],
+            message: m.message,
+            status: m.status as Mentorship["status"],
+            createdAt: m.createdAt.toISOString(),
+            acceptedAt: iso(m.acceptedAt),
+          }),
+        ),
+        // Le mentoré et son message restent privés : seule la place occupée chez le mentor est visible.
+        ...otherActive.map(
+          (m): Mentorship => ({
+            id: m.id,
+            mentorId: m.mentorId,
+            menteeId: "",
+            domain: m.domain as Mentorship["domain"],
+            axis: m.axis as Mentorship["axis"],
+            message: "",
+            status: m.status as Mentorship["status"],
+            createdAt: m.createdAt.toISOString(),
+            acceptedAt: iso(m.acceptedAt),
+          }),
+        ),
+      ],
+      sessions: [
+        ...mySessions.map(
+          (s): Session => ({
+            id: s.id,
+            mentorId: s.mentorId,
+            menteeId: s.menteeId,
+            startsAt: s.startsAt.toISOString(),
+            duration: s.duration,
+            format: s.format as Session["format"],
+            topic: s.topic,
+            status: s.status as Session["status"],
+            notes: s.notes ?? undefined,
+            rating: s.rating ?? undefined,
+            review: s.review ?? undefined,
+          }),
+        ),
+        ...publicSessions.map((s): Session => {
+          // Un avis écrit est public (auteur et sujet affichés sur le profil du mentor) ; le reste est anonymisé.
+          const reviewed = !!s.review;
+          return {
+            id: s.id,
+            mentorId: s.mentorId,
+            menteeId: reviewed ? s.menteeId : "",
+            startsAt: s.startsAt.toISOString(),
+            duration: s.duration,
+            format: s.format as Session["format"],
+            topic: reviewed ? s.topic : "",
+            status: s.status as Session["status"],
+            rating: s.rating ?? undefined,
+            review: s.review ?? undefined,
+          };
         }),
-      ),
-      sessions: sessions.map((s): Session => {
-        const own = mine(s.mentorId, s.menteeId);
-        return {
-          id: s.id,
-          mentorId: s.mentorId,
-          menteeId: s.menteeId,
-          startsAt: s.startsAt.toISOString(),
-          duration: s.duration,
-          format: s.format as Session["format"],
-          topic: s.topic,
-          status: s.status as Session["status"],
-          notes: own ? (s.notes ?? undefined) : undefined,
-          rating: s.rating ?? undefined,
-          review: s.review ?? undefined,
-        };
-      }),
+      ].sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
       conversations: conversations.map(
         (c): Conversation => ({
           id: c.id,
@@ -162,7 +234,8 @@ export class StateService {
           deadline: o.deadline.toISOString(),
           description: o.description,
           authorId: o.authorId,
-          interested: o.interested.map((x) => x.userId),
+          // Le nombre d'intéressés est public, leur identité non : seul l'utilisateur courant s'y reconnaît.
+          interested: o.interested.map((x) => (x.userId === id ? x.userId : "")),
           createdAt: o.createdAt.toISOString(),
         }),
       ),

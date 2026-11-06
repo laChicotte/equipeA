@@ -27,7 +27,8 @@ services:
       CORS_ORIGIN: https://${DOMAIN}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: 7d
-      DEMO_MODE: ${DEMO_MODE:-true}
+      DEMO_MODE: ${DEMO_MODE:-false}
+      SWAGGER: ${SWAGGER:-false}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
 
@@ -35,7 +36,9 @@ services:
     build:
       context: ../frontend
       args:
-        NEXT_PUBLIC_API_URL: https://${DOMAIN}/api
+        # Chemin relatif : front et API sont servis par le même Caddy, donc à la même origine.
+        # Aucun CORS, et le même build marche quelle que soit l'adresse (IP, nom EC2, domaine).
+        NEXT_PUBLIC_API_URL: /api
         NEXT_PUBLIC_TURN_URL: ${TURN_URL:-}
         NEXT_PUBLIC_TURN_USERNAME: ${TURN_USERNAME:-}
         NEXT_PUBLIC_TURN_CREDENTIAL: ${TURN_CREDENTIAL:-}

@@ -79,11 +79,12 @@ body {
   background: var(--color-terracotta-light);
 }
 
-/* Navigation au clavier : un contour bien visible sur tout élément interactif */
+/* Navigation au clavier : un contour bien visible sur tout élément interactif.
+   Pas de border-radius ici : le contour suit déjà l'arrondi propre de chaque élément,
+   et forcer un arrondi transformait champs et boutons en « pilules » au focus. */
 :focus-visible {
   outline: 3px solid var(--color-terracotta);
   outline-offset: 2px;
-  border-radius: 999px;
 }
 input:focus-visible,
 textarea:focus-visible,

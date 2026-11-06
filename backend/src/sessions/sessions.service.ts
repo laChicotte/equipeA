@@ -1,4 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { MessagesService } from "../messages/messages.service";
 import { NotificationsService } from "../notifications/notifications.service";
@@ -19,6 +20,19 @@ export class SessionsService {
     private readonly notifications: NotificationsService,
   ) {}
 
+  /**
+   * Exécute `fn` dans une transaction qui détient un verrou exclusif sur le créneau (mentor + heure).
+   * Deux réservations ou validations simultanées du même créneau passent donc l'une après l'autre :
+   * la seconde voit la première et échoue proprement au lieu de créer un doublon.
+   */
+  withSlotLock<T>(mentorId: string, startsAt: Date, fn: (tx: Prisma.TransactionClient) => Promise<T>) {
+    const key = `slot:${mentorId}:${startsAt.toISOString()}`;
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${key}))`;
+      return fn(tx);
+    });
+  }
+
   /** Le mentor confirme ou décline la demande de séance d'un mentoré. */
   async respond(mentorId: string, id: string, accept: boolean, reason?: string) {
     const s = await this.prisma.session.findUnique({ where: { id } });
@@ -29,9 +43,14 @@ export class SessionsService {
 
     if (accept) {
       if (s.startsAt.getTime() < Date.now()) throw new BadRequestException("Ce créneau est passé : proposez plutôt une nouvelle date au mentoré.");
-      const clash = await this.prisma.session.findFirst({ where: { mentorId, startsAt: s.startsAt, status: "planifiee" } });
-      if (clash) throw new BadRequestException("Vous avez déjà une séance sur ce créneau.");
-      await this.prisma.session.update({ where: { id }, data: { status: "planifiee" } });
+      await this.withSlotLock(mentorId, s.startsAt, async (tx) => {
+        // Relu sous verrou : la demande a pu être traitée entre-temps (double clic, autre onglet).
+        const fresh = await tx.session.findUnique({ where: { id }, select: { status: true } });
+        if (fresh?.status !== "demandee") throw new BadRequestException("Cette demande a déjà été traitée.");
+        const clash = await tx.session.findFirst({ where: { mentorId, startsAt: s.startsAt, status: "planifiee" } });
+        if (clash) throw new BadRequestException("Vous avez déjà une séance sur ce créneau.");
+        await tx.session.update({ where: { id }, data: { status: "planifiee" } });
+      });
       await this.messages.send(mentorId, s.menteeId, `Séance confirmée le ${longDate(s.startsAt)} · ${s.topic}`, { system: true });
       await this.notifications.notify(s.menteeId, mentorId, `a confirmé votre séance « ${s.topic} »`, "/seances");
       // Les autres demandes sur le même créneau ne peuvent plus être honorées.

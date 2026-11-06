@@ -7,7 +7,7 @@ import type { AxisId, Conversation, DomainId, Format, Goal, Mentorship, Opportun
 import { uid } from "./utils";
 
 /** Rafraîchissement de secours quand le flux temps réel est coupé… */
-const POLL_MS = 4000;
+const POLL_MS = 10_000;
 /** …et simple resynchronisation quand il fonctionne. */
 const POLL_LIVE_MS = 30_000;
 /** Durée d'affichage de « … écrit » après le dernier signal reçu. */
@@ -53,12 +53,16 @@ interface StoreValue {
   login: (email: string, password: string) => Promise<string | null>;
   register: (data: { name: string; email: string; password: string; city: string; role: Role }) => Promise<string | null>;
   logout: () => void;
-  updateProfile: (data: Partial<Omit<User, "id" | "role" | "joinedAt">>) => Promise<void>;
+  updateProfile: (data: Partial<Omit<User, "id" | "role" | "joinedAt" | "avatar">>) => Promise<void>;
+  /** Envoie une photo de profil (déjà recadrée) ; renvoie true si elle a été enregistrée. */
+  uploadPhoto: (photo: Blob) => Promise<boolean>;
+  removePhoto: () => Promise<void>;
   resetDemo: () => Promise<void>;
 
   requestMentorship: (mentorId: string, data: { domain: DomainId; axis: AxisId; message: string }) => Promise<void>;
   respondMentorship: (id: string, accept: boolean) => Promise<void>;
-  endMentorship: (id: string) => Promise<void>;
+  /** Clôture un mentorat actif, avec un mot de fin facultatif ; renvoie true si c'est fait. */
+  endMentorship: (id: string, message?: string) => Promise<boolean>;
   toggleFavorite: (mentorId: string) => Promise<void>;
 
   sendMessage: (otherId: string, text: string) => Promise<string>;
@@ -132,6 +136,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
   const ringTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const inflight = useRef<Promise<void> | null>(null);
+  const queued = useRef(false);
+
   const toast = useCallback((text: string, kind: ToastKind = "info") => {
     const id = uid("t");
     setToasts((t) => [...t, { id, text, kind }]);
@@ -139,18 +146,32 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   /** Recharge l'instantané des données visibles par l'utilisateur. */
-  const refresh = useCallback(async () => {
-    try {
-      const next = await api<State>("/state");
-      // Jeton expiré ou invalide : l'API répond en mode public.
-      if (!next.currentUserId && tokenStore.get()) tokenStore.clear();
-      setState(next);
-      setOffline(null);
-    } catch (e) {
-      setOffline(e instanceof ApiError ? e.message : String(e));
-    } finally {
-      setReady(true);
+  const refresh = useCallback(() => {
+    // Un seul chargement à la fois : les demandes reçues pendant un chargement en déclenchent
+    // un seul autre à la fin (au lieu d'empiler les requêtes vers /state).
+    if (inflight.current) {
+      queued.current = true;
+      return inflight.current;
     }
+    const load = async () => {
+      do {
+        queued.current = false;
+        try {
+          const next = await api<State>("/state");
+          // Jeton expiré ou invalide : l'API répond en mode public.
+          if (!next.currentUserId && tokenStore.get()) tokenStore.clear();
+          setState(next);
+          setOffline(null);
+        } catch (e) {
+          setOffline(e instanceof ApiError ? e.message : String(e));
+        }
+      } while (queued.current);
+      setReady(true);
+    };
+    inflight.current = load().finally(() => {
+      inflight.current = null;
+    });
+    return inflight.current;
   }, []);
 
   useEffect(() => {
@@ -373,6 +394,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         await run(() => api("/users/me", { method: "PATCH", body: data }));
       },
 
+      async uploadPhoto(photo) {
+        const body = new FormData();
+        body.append("photo", photo, "photo.jpg");
+        return (await run(() => api("/users/me/photo", { body }).then(() => true), "Photo de profil mise à jour")) ?? false;
+      },
+
+      async removePhoto() {
+        await run(() => api("/users/me/photo", { method: "DELETE" }), "Photo de profil retirée");
+      },
+
       async resetDemo() {
         await run(() => api("/demo/reset", { method: "POST" }), "Les données de démonstration ont été réinitialisées.");
         tokenStore.clear();
@@ -390,8 +421,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         await run(() => api(`/mentorships/${id}/respond`, { method: "PATCH", body: { accept } }), accept ? `Vous accompagnez désormais ${nameOf(ms?.menteeId ?? "")}` : "Demande déclinée");
       },
 
-      async endMentorship(id) {
-        await run(() => api(`/mentorships/${id}/end`, { method: "PATCH" }), "Mentorat clôturé. Merci pour ce bout de chemin ensemble !");
+      async endMentorship(id, message) {
+        const body = message?.trim() ? { message: message.trim() } : {};
+        return (await run(() => api(`/mentorships/${id}/end`, { method: "PATCH", body }).then(() => true), "Mentorat clôturé. Merci pour ce bout de chemin ensemble !")) ?? false;
       },
 
       async toggleFavorite(mentorId) {

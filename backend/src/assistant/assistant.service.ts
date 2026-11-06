@@ -46,6 +46,10 @@ export class AssistantService {
 
   private throttle(userId: string) {
     const now = Date.now();
+    // Purge des utilisateurs inactifs : la table ne grossit plus indéfiniment.
+    if (this.calls.size > 200) {
+      for (const [id, times] of this.calls) if (now - times[times.length - 1] >= WINDOW_MS) this.calls.delete(id);
+    }
     const recent = (this.calls.get(userId) ?? []).filter((t) => now - t < WINDOW_MS);
     if (recent.length >= MAX_PER_WINDOW) {
       throw new HttpException("Vous avez envoyé beaucoup de messages. Patientez une minute avant de reprendre.", HttpStatus.TOO_MANY_REQUESTS);

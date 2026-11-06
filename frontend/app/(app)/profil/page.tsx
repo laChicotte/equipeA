@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { Eye } from "lucide-react";
+import { useRef, useState } from "react";
+import { Camera, Eye, Loader2, Trash2 } from "lucide-react";
+import { prepareProfilePhoto } from "@/lib/image";
 import { useStore } from "@/lib/store";
 import { DOMAINS, FORMATS, PROFILES } from "@/lib/domains";
 import type { DomainId, Format, Profile, Slot, User } from "@/lib/types";
@@ -59,7 +60,7 @@ function ProfileForm({ me }: { me: User }) {
   return (
     <div className="mx-auto max-w-3xl animate-apparition">
       <header className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-center">
-        <Avatar user={me} size="xl" />
+        <PhotoPicker me={me} />
         <div className="flex-1">
           <Eyebrow>{mentor ? "Mentor" : "Mentoré·e"} · membre depuis {formatDate(me.joinedAt, { month: "long", year: "numeric" })}</Eyebrow>
           <h1 className="mt-1 font-serif text-4xl font-medium">{me.name}</h1>
@@ -190,6 +191,62 @@ function ProfileForm({ me }: { me: User }) {
           </button>
         </div>
       </form>
+    </div>
+  );
+}
+
+/** Avatar cliquable : choisir, remplacer ou retirer sa photo de profil. */
+function PhotoPicker({ me }: { me: User }) {
+  const { uploadPhoto, removePhoto, toast } = useStore();
+  const input = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // permet de rechoisir le même fichier
+    if (!file) return;
+    setBusy(true);
+    try {
+      await uploadPhoto(await prepareProfilePhoto(file));
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Impossible d'envoyer cette photo.", "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async () => {
+    setBusy(true);
+    await removePhoto();
+    setBusy(false);
+  };
+
+  return (
+    <div className="flex flex-col items-start gap-2 sm:items-center">
+      <button
+        type="button"
+        onClick={() => input.current?.click()}
+        disabled={busy}
+        className="group relative rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-terracotta focus-visible:ring-offset-2"
+        aria-label={me.avatar ? "Changer ma photo de profil" : "Ajouter une photo de profil"}
+        title={me.avatar ? "Changer ma photo" : "Ajouter une photo"}
+      >
+        <Avatar user={me} size="xl" />
+        <span className={cn("absolute inset-0 flex items-center justify-center rounded-full bg-nuit/55 text-creme transition", busy ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100")}>
+          {busy ? <Loader2 size={22} className="animate-spin" /> : <Camera size={22} />}
+        </span>
+        {!busy && (
+          <span className="absolute -bottom-0.5 -right-0.5 flex h-7 w-7 items-center justify-center rounded-full bg-terracotta text-creme shadow ring-2 ring-papier">
+            <Camera size={14} />
+          </span>
+        )}
+      </button>
+      <input ref={input} type="file" accept="image/jpeg,image/png,image/webp,image/*" className="hidden" onChange={onFile} />
+      {me.avatar && (
+        <button type="button" onClick={remove} disabled={busy} className="inline-flex items-center gap-1 text-xs font-medium text-nuit-500 transition hover:text-terracotta disabled:opacity-50">
+          <Trash2 size={12} /> Retirer
+        </button>
+      )}
     </div>
   );
 }

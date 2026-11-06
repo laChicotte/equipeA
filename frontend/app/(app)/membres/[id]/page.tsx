@@ -8,12 +8,13 @@ import { goalProgress, useStore } from "@/lib/store";
 import { domainById, PROFILES } from "@/lib/domains";
 import { cn, formatDate } from "@/lib/utils";
 import { Avatar, btn, DomainBadge, Eyebrow, field, Progress } from "@/components/ui";
-import { BookingModal, SessionRow } from "@/components/mentoring";
+import { BookingModal, EndMentorshipModal, SessionRow } from "@/components/mentoring";
 
 export default function MembrePage() {
   const { id } = useParams<{ id: string }>();
   const { state, me, setMentorNote } = useStore();
   const [booking, setBooking] = useState(false);
+  const [ending, setEnding] = useState(false);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const member = state.users.find((u) => u.id === id && u.role === "mentore");
   if (!member) return notFound();
@@ -49,6 +50,9 @@ export default function MembrePage() {
             </Link>
             <button onClick={() => setBooking(true)} className={btn.accent}>
               <CalendarPlus size={16} /> Planifier
+            </button>
+            <button onClick={() => setEnding(true)} className={btn.quiet}>
+              Clôturer
             </button>
           </div>
         )}
@@ -125,6 +129,7 @@ export default function MembrePage() {
       )}
 
       {ship && <BookingModal mentor={me} mentee={member} open={booking} onClose={() => setBooking(false)} />}
+      {ship && <EndMentorshipModal mentorship={ship} other={member} open={ending} onClose={() => setEnding(false)} />}
     </div>
   );
 }

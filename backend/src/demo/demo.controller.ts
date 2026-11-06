@@ -1,5 +1,7 @@
-import { Controller, ForbiddenException, Get, HttpCode, Post } from "@nestjs/common";
-import { ApiTags } from "@nestjs/swagger";
+import { Controller, ForbiddenException, Get, HttpCode, Post, UseGuards } from "@nestjs/common";
+import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+import { Throttle } from "@nestjs/throttler";
+import { AuthThrottlerGuard } from "../auth/auth.throttle";
 import { Public } from "../auth/auth.guard";
 import { PrismaService } from "../prisma/prisma.service";
 import { seedDatabase } from "./seeder";
@@ -17,8 +19,13 @@ export class DemoController {
     return { status: "ok", demo: process.env.DEMO_MODE === "true" };
   }
 
-  /** Remet la base dans l'état de démonstration. Disponible uniquement si DEMO_MODE=true. */
-  @Public()
+  /**
+   * Remet la base dans l'état de démonstration. Disponible uniquement si DEMO_MODE=true,
+   * pour un membre connecté, et limité en fréquence. Ne jamais activer DEMO_MODE sur une base réelle.
+   */
+  @ApiBearerAuth()
+  @UseGuards(AuthThrottlerGuard)
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
   @Post("demo/reset")
   @HttpCode(200)
   reset() {

@@ -1,5 +1,7 @@
 /** Client HTTP de l'API MonMentor (backend NestJS). */
 
+/** Adresse de l'API : absolue en développement (autre port), relative (« /api ») en production derrière Caddy. */
+
 export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api").replace(/\/$/, "");
 
 /** Évite la page d'avertissement que ngrok (offre gratuite) renvoie à la place de la réponse de l'API. */
@@ -44,18 +46,25 @@ export const OFFLINE_MESSAGE = "Impossible de joindre le serveur MonMentor. Vér
 
 type Method = "GET" | "POST" | "PATCH" | "DELETE";
 
+/** URL utilisable par une balise <img> : les fichiers servis par l'API (« /users/… ») sont préfixés par son adresse. */
+export function apiAsset(url: string): string {
+  return url.startsWith("/") ? `${API_URL}${url}` : url;
+}
+
 export async function api<T = void>(path: string, opts: { method?: Method; body?: unknown } = {}): Promise<T> {
   const token = tokenStore.get();
+  // FormData : le navigateur fixe lui-même le Content-Type (multipart avec sa frontière).
+  const form = opts.body instanceof FormData;
   let res: Response;
   try {
     res = await fetch(`${API_URL}${path}`, {
       method: opts.method ?? (opts.body ? "POST" : "GET"),
       headers: {
         ...BASE_HEADERS,
-        ...(opts.body !== undefined ? { "Content-Type": "application/json" } : {}),
+        ...(opts.body !== undefined && !form ? { "Content-Type": "application/json" } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+      body: opts.body === undefined ? undefined : form ? (opts.body as FormData) : JSON.stringify(opts.body),
       cache: "no-store",
     });
   } catch {

@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { BadgeCheck, CircleAlert, CircleCheck, Info, MessageCircle, Star, WifiOff, X } from "lucide-react";
 import type { DomainId, User } from "@/lib/types";
 import { domainById } from "@/lib/domains";
+import { apiAsset } from "@/lib/api";
 import { cn, initials } from "@/lib/utils";
 import { useStore, type ToastKind } from "@/lib/store";
 
@@ -62,7 +63,7 @@ export function Avatar({ user, size = "md", className, ring }: { user?: User; si
     >
       {user.avatar ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={user.avatar} alt={user.name} className="h-full w-full object-cover" />
+        <img src={apiAsset(user.avatar)} alt={user.name} className="h-full w-full object-cover" />
       ) : (
         initials(user.name)
       )}
@@ -255,7 +256,7 @@ export const btn = {
 };
 
 export const field =
-  "w-full rounded-lg border border-beige-dark bg-papier px-3.5 py-2.5 text-[0.95rem] text-nuit placeholder:text-nuit-500/60 outline-none transition focus:border-nuit/40 focus:ring-4 focus:ring-nuit/10";
+  "w-full rounded-lg border border-beige-dark bg-papier px-3.5 py-2.5 text-[0.95rem] text-nuit placeholder:text-nuit-500/60 outline-none transition focus:border-nuit/40 focus:ring-[3px] focus:ring-nuit/[0.07]";
 
 export function Chip({ active, children, onClick, className }: { active?: boolean; children: React.ReactNode; onClick?: () => void; className?: string }) {
   return (

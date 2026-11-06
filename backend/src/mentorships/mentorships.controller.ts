@@ -1,6 +1,6 @@
 import { BadRequestException, Body, Controller, ForbiddenException, HttpCode, NotFoundException, Param, Patch, Post } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
-import { IsBoolean, IsIn, IsString, MaxLength, MinLength } from "class-validator";
+import { IsBoolean, IsIn, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
 import { AXIS_IDS, DOMAIN_IDS } from "../common/constants";
 import { CurrentUser } from "../auth/auth.guard";
 import { PrismaService } from "../prisma/prisma.service";
@@ -27,6 +27,14 @@ class RequestMentorshipDto {
 class RespondDto {
   @IsBoolean()
   accept: boolean;
+}
+
+class EndDto {
+  /** Mot de fin facultatif, envoyé à l'autre personne dans la conversation */
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  message?: string;
 }
 
 @ApiTags("Mise en relation")
@@ -81,13 +89,45 @@ export class MentorshipsController {
     return { status: accept ? "active" : "refusee" };
   }
 
-  /** L'un ou l'autre clôture un mentorat actif. */
+  /**
+   * L'un ou l'autre clôture un mentorat actif. En une seule transaction :
+   * - le mentorat passe à « terminee » (la place se libère chez le mentor) ;
+   * - les séances à venir entre eux (confirmées ou demandées) sont annulées ;
+   * - les objectifs que le mentoré avait partagés avec ce mentor ne lui sont plus rattachés.
+   * L'autre personne est prévenue par un message système (suivi du mot de fin éventuel) et une notification.
+   */
   @Patch(":id/end")
   @HttpCode(204)
-  async end(@CurrentUser() me: string, @Param("id") id: string) {
+  async end(@CurrentUser() me: string, @Param("id") id: string, @Body() dto: EndDto) {
     const ms = await this.prisma.mentorship.findUnique({ where: { id } });
-    if (!ms) throw new NotFoundException();
+    if (!ms) throw new NotFoundException("Mentorat introuvable.");
     if (ms.mentorId !== me && ms.menteeId !== me) throw new ForbiddenException();
-    await this.prisma.mentorship.update({ where: { id }, data: { status: "terminee" } });
+    if (ms.status !== "active") throw new BadRequestException("Seul un mentorat en cours peut être clôturé.");
+
+    const pair = { mentorId: ms.mentorId, menteeId: ms.menteeId };
+    const cancelled = await this.prisma.$transaction(async (tx) => {
+      // Mise à jour conditionnelle : deux clôtures simultanées (double clic, les deux membres) n'en font qu'une.
+      const { count } = await tx.mentorship.updateMany({ where: { id, status: "active" }, data: { status: "terminee" } });
+      if (!count) throw new BadRequestException("Ce mentorat vient déjà d'être clôturé.");
+      const sessions = await tx.session.updateMany({
+        where: { ...pair, status: { in: ["planifiee", "demandee"] }, startsAt: { gte: new Date() } },
+        data: { status: "annulee" },
+      });
+      await tx.goal.updateMany({ where: { userId: ms.menteeId, mentorId: ms.mentorId }, data: { mentorId: null } });
+      return sessions.count;
+    });
+
+    const byMentor = me === ms.mentorId;
+    const other = byMentor ? ms.menteeId : ms.mentorId;
+    const detail = cancelled ? ` · ${cancelled} séance${cancelled > 1 ? "s" : ""} à venir annulée${cancelled > 1 ? "s" : ""}` : "";
+    await this.messages.send(me, other, `Mentorat clôturé${detail}`, { system: true });
+    const word = dto.message?.trim();
+    if (word) await this.messages.send(me, other, word, { notify: false });
+    await this.notifications.notify(
+      other,
+      me,
+      byMentor ? "a clôturé votre mentorat. Pensez à évaluer vos séances : votre avis aide les prochains mentorés." : "a clôturé votre mentorat. Merci pour cet accompagnement !",
+      byMentor ? "/seances" : `/membres/${ms.menteeId}`,
+    );
   }
 }

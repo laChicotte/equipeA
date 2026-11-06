@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { APP_GUARD } from "@nestjs/core";
 import { JwtModule } from "@nestjs/jwt";
+import { ThrottlerModule } from "@nestjs/throttler";
 import { PrismaModule } from "./prisma/prisma.service";
 import { JwtAuthGuard } from "./auth/auth.guard";
 import { AuthController } from "./auth/auth.controller";
@@ -31,6 +32,8 @@ if (!secret || secret === "change-moi") throw new Error("JWT_SECRET doit être d
 @Module({
   imports: [
     PrismaModule,
+    // Limites appliquées route par route (@UseGuards(AuthThrottlerGuard) + @Throttle) : authentification, démo.
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 10 }]),
     JwtModule.register({
       global: true,
       secret,

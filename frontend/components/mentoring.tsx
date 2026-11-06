@@ -7,7 +7,7 @@ import { CalendarDays, Check, ChevronLeft, ChevronRight, Clock, Heart, MapPin, M
 import { AXES, CAMPUS_FRANCE_NOTICE, DAYS, domainById, FORMATS } from "@/lib/domains";
 import { activeMentees, mentorRating, nextSlots, type Match } from "@/lib/matching";
 import { useStore } from "@/lib/store";
-import type { AxisId, DomainId, Format, Session, User } from "@/lib/types";
+import type { AxisId, DomainId, Format, Mentorship, Session, User } from "@/lib/types";
 import { cn, formatDate } from "@/lib/utils";
 import { Avatar, btn, DomainBadge, field, Modal, StarInput, Verified } from "./ui";
 
@@ -509,93 +509,100 @@ export function SessionRow({ session, onRate }: { session: Session; onRate?: (s:
   const canRate = past && me.id === session.menteeId && !session.rating;
 
   return (
+    // Mise en page selon la largeur de la carte elle-même (colonne étroite de l'accueil comme pleine page) :
+    // actions sous le contenu quand la place manque, à droite sinon.
     <div
       className={cn(
-        "flex flex-col gap-4 rounded-2xl bg-papier p-4 shadow-doux sm:flex-row sm:items-center sm:p-5",
+        "@container rounded-2xl bg-papier p-4 shadow-doux sm:p-5",
         (session.status === "annulee" || session.status === "refusee") && "opacity-60",
         requested && "border-2 border-dashed border-terracotta/40",
       )}
     >
-      <div className={cn("flex w-16 shrink-0 flex-col items-center rounded-2xl py-2 text-center", soon ? "bg-terracotta text-white" : requested ? "bg-terracotta-light text-terracotta-dark" : "bg-beige/70")}>
-        <span className="text-[0.65rem] font-semibold uppercase tracking-wider">{formatDate(session.startsAt, { month: "short" })}</span>
-        <span className="font-serif text-2xl font-semibold leading-none">{start.getDate()}</span>
-        <span className="text-[0.7rem]">{formatDate(session.startsAt, { hour: "2-digit", minute: "2-digit" })}</span>
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="font-serif text-base leading-tight">{session.topic}</p>
-        <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-nuit-500">
-          <span className="inline-flex items-center gap-1.5">
-            <Avatar user={other} size="xs" /> {other?.name}
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <Icon size={14} /> {FORMATS[session.format]} · {session.duration} min
-          </span>
-          {session.status === "annulee" && <span className="font-semibold text-terracotta-dark">Annulée</span>}
-          {session.status === "refusee" && <span className="font-semibold text-terracotta-dark">Déclinée par le mentor</span>}
-        </p>
-        {requested && (
-          <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-terracotta-light px-3 py-1 text-xs font-semibold text-terracotta-dark">
-            <Clock size={13} /> {iAmMentor ? `${other?.name.split(" ")[0]} demande ce créneau : à vous de valider` : "En attente de validation par votre mentor"}
-          </p>
-        )}
-        {session.notes && (
-          <p className="mt-2 flex items-start gap-1.5 text-sm text-encre">
-            <NotebookPen size={14} className="mt-0.5 shrink-0 text-nuit-500" aria-label="Notes de séance" />
-            <span className="line-clamp-2">{session.notes}</span>
-          </p>
-        )}
-        {session.rating && (
-          <p className="mt-1 inline-flex items-center gap-1 text-sm">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <Star key={i} size={13} className={i <= (session.rating ?? 0) ? "fill-terracotta text-terracotta" : "text-beige-dark"} />
-            ))}
-            {session.review && <span className="ml-1 line-clamp-1 text-nuit-500">« {session.review} »</span>}
-          </p>
-        )}
-      </div>
-      <div className="flex shrink-0 flex-wrap gap-2">
-        {session.status === "planifiee" && (
-          <>
-            {session.format !== "presentiel" && (
-              <Link href={session.format === "visio" ? `/visio/${session.id}` : `/messages?avec=${otherId}`} className={soon ? btn.accent : btn.primary}>
-                {session.format === "visio" ? <Video size={16} /> : <MessageCircle size={16} />} Rejoindre
-              </Link>
+      <div className="flex flex-col gap-4 @3xl:flex-row @3xl:items-center">
+        <div className="flex min-w-0 flex-1 items-start gap-4 @3xl:items-center">
+          <div className={cn("flex w-16 shrink-0 flex-col items-center rounded-2xl py-2 text-center", soon ? "bg-terracotta text-white" : requested ? "bg-terracotta-light text-terracotta-dark" : "bg-beige/70")}>
+            <span className="text-[0.65rem] font-semibold uppercase tracking-wider">{formatDate(session.startsAt, { month: "short" })}</span>
+            <span className="font-serif text-2xl font-semibold leading-none">{start.getDate()}</span>
+            <span className="text-[0.7rem]">{formatDate(session.startsAt, { hour: "2-digit", minute: "2-digit" })}</span>
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-serif text-base leading-tight">{session.topic}</p>
+            <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-nuit-500">
+              <span className="inline-flex items-center gap-1.5">
+                <Avatar user={other} size="xs" /> {other?.name}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <Icon size={14} /> {FORMATS[session.format]} · {session.duration} min
+              </span>
+              {session.status === "annulee" && <span className="font-semibold text-terracotta-dark">Annulée</span>}
+              {session.status === "refusee" && <span className="font-semibold text-terracotta-dark">Déclinée par le mentor</span>}
+            </p>
+            {requested && (
+              <p className="mt-2 inline-flex max-w-full items-center gap-1.5 rounded-full bg-terracotta-light px-2.5 py-0.5 text-xs font-semibold text-terracotta-dark">
+                <Clock size={12} className="shrink-0" />
+                <span className="truncate">{iAmMentor ? "Créneau demandé · à valider" : "En attente de validation du mentor"}</span>
+              </p>
             )}
+            {session.notes && (
+              <p className="mt-2 flex items-start gap-1.5 text-sm text-encre">
+                <NotebookPen size={14} className="mt-0.5 shrink-0 text-nuit-500" aria-label="Notes de séance" />
+                <span className="line-clamp-2">{session.notes}</span>
+              </p>
+            )}
+            {session.rating && (
+              <p className="mt-1 inline-flex items-center gap-1 text-sm">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Star key={i} size={13} className={i <= (session.rating ?? 0) ? "fill-terracotta text-terracotta" : "text-beige-dark"} />
+                ))}
+                {session.review && <span className="ml-1 line-clamp-1 text-nuit-500">« {session.review} »</span>}
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="flex shrink-0 flex-wrap justify-end gap-2 empty:hidden">
+          {session.status === "planifiee" && (
+            <>
+              {session.format !== "presentiel" && (
+                <Link href={session.format === "visio" ? `/visio/${session.id}` : `/messages?avec=${otherId}`} className={soon ? btn.accent : btn.primary}>
+                  {session.format === "visio" ? <Video size={16} /> : <MessageCircle size={16} />} Rejoindre
+                </Link>
+              )}
+              <button
+                onClick={() => {
+                  if (confirm("Annuler cette séance ?")) cancelSession(session.id);
+                }}
+                className={btn.quiet}
+              >
+                Annuler
+              </button>
+            </>
+          )}
+          {requested && iAmMentor && (
+            <>
+              <button onClick={() => setDeclining(true)} className={btn.ghost}>
+                <X size={16} /> Décliner
+              </button>
+              <button onClick={() => respondSession(session.id, true)} className={btn.accent}>
+                <Check size={16} /> Valider
+              </button>
+            </>
+          )}
+          {requested && !iAmMentor && (
             <button
               onClick={() => {
-                if (confirm("Annuler cette séance ?")) cancelSession(session.id);
+                if (confirm("Retirer cette demande de séance ?")) cancelSession(session.id);
               }}
               className={btn.quiet}
             >
-              Annuler
+              Retirer la demande
             </button>
-          </>
-        )}
-        {requested && iAmMentor && (
-          <>
-            <button onClick={() => setDeclining(true)} className={btn.ghost}>
-              <X size={16} /> Décliner
+          )}
+          {canRate && onRate && (
+            <button onClick={() => onRate(session)} className={btn.accent}>
+              <Star size={16} /> Évaluer
             </button>
-            <button onClick={() => respondSession(session.id, true)} className={btn.accent}>
-              <Check size={16} /> Valider
-            </button>
-          </>
-        )}
-        {requested && !iAmMentor && (
-          <button
-            onClick={() => {
-              if (confirm("Retirer cette demande de séance ?")) cancelSession(session.id);
-            }}
-            className={btn.quiet}
-          >
-            Retirer la demande
-          </button>
-        )}
-        {canRate && onRate && (
-          <button onClick={() => onRate(session)} className={btn.accent}>
-            <Star size={16} /> Évaluer
-          </button>
-        )}
+          )}
+        </div>
       </div>
 
       <Modal open={declining} onClose={() => setDeclining(false)} title="Décliner la demande">
@@ -640,5 +647,60 @@ export function StatTile({ icon: Icon, value, label, tone = "beige" }: { icon: t
         <p className="mt-1.5 text-xs leading-snug text-nuit-500">{label}</p>
       </div>
     </div>
+  );
+}
+
+/** Confirmation de fin de mentorat, avec ses conséquences et un mot de fin facultatif. */
+export function EndMentorshipModal({ mentorship, other, open, onClose, onEnded }: { mentorship: Mentorship; other: User; open: boolean; onClose: () => void; onEnded?: () => void }) {
+  const { state, me, endMentorship } = useStore();
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const now = Date.now();
+  const upcoming = state.sessions.filter(
+    (s) => s.mentorId === mentorship.mentorId && s.menteeId === mentorship.menteeId && (s.status === "planifiee" || s.status === "demandee") && new Date(s.startsAt).getTime() >= now,
+  ).length;
+  const goals = state.goals.filter((g) => g.userId === mentorship.menteeId && g.mentorId === mentorship.mentorId).length;
+  const first = other.name.split(" ")[0];
+  const byMentor = me?.id === mentorship.mentorId;
+
+  return (
+    <Modal open={open} onClose={onClose} title={`Clôturer le mentorat avec ${first}`}>
+      <form
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setBusy(true);
+          const ok = await endMentorship(mentorship.id, message);
+          setBusy(false);
+          if (ok) {
+            setMessage("");
+            onClose();
+            onEnded?.();
+          }
+        }}
+        className="space-y-5"
+      >
+        <div className="space-y-2 text-sm text-encre">
+          <p>{first} sera prévenu·e par un message et une notification.</p>
+          <ul className="list-disc space-y-1 pl-5 text-nuit-500">
+            {upcoming > 0 && <li>{upcoming === 1 ? "La séance à venir sera annulée." : `Les ${upcoming} séances à venir seront annulées.`}</li>}
+            {goals > 0 && <li>{goals === 1 ? "L'objectif partagé ne sera plus suivi" : `Les ${goals} objectifs partagés ne seront plus suivis`} {byMentor ? "par vous." : `par ${first}.`}</li>}
+            {byMentor ? <li>Une place se libère dans votre accompagnement.</li> : <li>Vous pourrez de nouveau demander un mentorat à {first} plus tard.</li>}
+            <li>Votre conversation et l&apos;historique des séances sont conservés.</li>
+          </ul>
+        </div>
+        <label className="block">
+          <span className="mb-1.5 block text-sm font-medium">Un mot de fin (facultatif)</span>
+          <textarea value={message} onChange={(e) => setMessage(e.target.value)} maxLength={1000} rows={4} className={field} placeholder={`Merci ${first} pour…`} />
+        </label>
+        <div className="flex flex-wrap justify-end gap-2">
+          <button type="button" onClick={onClose} className={btn.ghost}>
+            Annuler
+          </button>
+          <button type="submit" disabled={busy} className={btn.primary}>
+            <Check size={16} /> Clôturer le mentorat
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 }
